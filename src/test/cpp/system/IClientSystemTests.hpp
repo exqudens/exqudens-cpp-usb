@@ -39,6 +39,10 @@ namespace exqudens::usb {
             std::shared_ptr<IClient> client = nullptr;
             std::vector<std::map<std::string, unsigned short>> devices = {};
             std::map<std::string, unsigned short> device = {};
+            std::vector<std::string> stackTrace = {};
+            std::string data = "";
+            std::vector<unsigned char> bytes = {};
+            size_t size = 0;
 
             client = ClientFactory::createShared(&IClientSystemTests::log, true, true);
             devices = client->listDevices();
@@ -53,18 +57,63 @@ namespace exqudens::usb {
 
             client->open(device, true, true);
             ASSERT_TRUE(client->isOpen());
+            ASSERT_TRUE(device == client->getDevice());
 
-            std::string data = "abc";
-            std::vector<unsigned char> bytes = std::vector<unsigned char>(data.begin(), data.end());
-            size_t size = client->bulkWrite(bytes, 1, 1000);
+            try {
+                bytes = client->bulkRead(1);
+            } catch (const std::exception& e) {
+                stackTrace = TestUtils::toStackTrace(e);
+            }
+            TEST_LOG_I(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
+            TEST_LOG_I(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
+
+            ASSERT_TRUE(bytes.empty());
+            ASSERT_FALSE(stackTrace.empty());
+            ASSERT_TRUE(stackTrace.at(0).ends_with("libusbErrorName: 'LIBUSB_ERROR_TIMEOUT'"));
+
+            stackTrace = {};
+            data = "";
+            bytes = {};
+            size = 0;
+
+            data = "abc";
+            bytes = std::vector<unsigned char>(data.begin(), data.end());
+            size = client->bulkWrite(bytes, 1);
             TEST_LOG_I(LOGGER_ID) << "size: " << size;
 
-            bytes = client->bulkRead(1 | 0x80, 1000);
+            ASSERT_EQ(3, size);
+
+            stackTrace = {};
+            data = "";
+            bytes = {};
+            size = 0;
+
+            bytes = client->bulkRead(1);
             data = std::string(bytes.begin(), bytes.end());
             TEST_LOG_I(LOGGER_ID) << "data: '" << data << "'";
 
+            ASSERT_EQ(std::string("ABC"), data);
+
+            stackTrace = {};
+            data = "";
+            bytes = {};
+            size = 0;
+
+            try {
+                bytes = client->bulkRead(1);
+            } catch (const std::exception& e) {
+                stackTrace = TestUtils::toStackTrace(e);
+            }
+            TEST_LOG_I(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
+            TEST_LOG_I(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
+
+            ASSERT_TRUE(bytes.empty());
+            ASSERT_FALSE(stackTrace.empty());
+            ASSERT_TRUE(stackTrace.at(0).ends_with("libusbErrorName: 'LIBUSB_ERROR_TIMEOUT'"));
+
             client->close();
             ASSERT_FALSE(client->isOpen());
+            ASSERT_TRUE(client->getDevice().empty());
 
             TEST_LOG_I(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
         } catch (const std::exception& e) {

@@ -29,7 +29,7 @@ class ConanConfiguration(ConanFile):
 
     def requirements(self):
         try:
-            self.requires("libusb/1.0.27")
+            self.requires("libusb/1.0.26")
         except Exception as e:
             logging.error(e, exc_info=True)
             raise e

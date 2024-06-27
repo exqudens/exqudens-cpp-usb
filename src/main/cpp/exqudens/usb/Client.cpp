@@ -200,14 +200,45 @@ namespace exqudens::usb {
         }
     }
 
-    size_t Client::bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) {
+    std::map<std::string, unsigned short> Client::getDevice() {
+        try {
+            return device;
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    unsigned char Client::toWriteEndpoint(const unsigned char& endpoint) {
+        try {
+            return endpoint | LIBUSB_ENDPOINT_OUT;
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    unsigned char Client::toReadEndpoint(const unsigned char& endpoint) {
+        try {
+            return endpoint | LIBUSB_ENDPOINT_IN;
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    size_t Client::bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout, const bool& autoEndpointDirection) {
         try {
             if (value.size() > INT_MAX) {
                 throw std::runtime_error(CALL_INFO + ": value.size: " + std::to_string(value.size()) + " greater than INT_MAX: " + std::to_string(INT_MAX));
             }
             int libusbBulkTransfered = 0;
             std::vector<unsigned char>& data = const_cast<std::vector<unsigned char>&>(value);
-            int libusbError = libusb_bulk_transfer(handle, endpoint, data.data(), (int) data.size(), &libusbBulkTransfered, timeout);
+            int libusbError = libusb_bulk_transfer(
+                handle,
+                (autoEndpointDirection ? toWriteEndpoint(endpoint) : endpoint),
+                data.data(),
+                (int) data.size(),
+                &libusbBulkTransfered,
+                timeout
+            );
             if (libusbError) {
                 const char* libusbErrorName = libusb_error_name(libusbError);
                 throw std::runtime_error(CALL_INFO + ": libusbErrorName: '" + std::string(libusbErrorName) + "'");
@@ -222,7 +253,23 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<unsigned char> Client::bulkRead(const int& size, const unsigned char& endpoint, const unsigned int& timeout) {
+    size_t Client::bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) {
+        try {
+            return bulkWrite(value, endpoint, timeout, true);
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    size_t Client::bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint) {
+        try {
+            return bulkWrite(value, endpoint, 1000, true);
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size, const bool& autoEndpointDirection) {
         try {
             if (size < 0) {
                 throw std::runtime_error(CALL_INFO + ": size: " + std::to_string(size) + " less zero");
@@ -230,7 +277,14 @@ namespace exqudens::usb {
             std::vector<unsigned char> result = {};
             result.resize(size);
             int libusbBulkTransfered = 0;
-            int libusbError = libusb_bulk_transfer(handle, endpoint, result.data(), (int) result.size(), &libusbBulkTransfered, timeout);
+            int libusbError = libusb_bulk_transfer(
+                handle,
+                (autoEndpointDirection ? toReadEndpoint(endpoint) : endpoint),
+                result.data(),
+                (int) result.size(),
+                &libusbBulkTransfered,
+                timeout
+            );
             if (libusbError) {
                 const char* libusbErrorName = libusb_error_name(libusbError);
                 throw std::runtime_error(CALL_INFO + ": libusbErrorName: '" + std::string(libusbErrorName) + "'");
@@ -245,9 +299,25 @@ namespace exqudens::usb {
         }
     }
 
+    std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size) {
+        try {
+            return bulkRead(endpoint, timeout, size, true);
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
     std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint, const unsigned int& timeout) {
         try {
-            return bulkRead(INT_MAX, endpoint, timeout);
+            return bulkRead(endpoint, timeout, INT_MAX, true);
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint) {
+        try {
+            return bulkRead(endpoint, 1000, INT_MAX, true);
         } catch (...) {
             std::throw_with_nested(std::runtime_error(CALL_INFO));
         }

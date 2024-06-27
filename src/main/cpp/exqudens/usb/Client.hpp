@@ -57,10 +57,19 @@ namespace exqudens::usb {
 
             bool isOpen() override;
 
-            size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) override;
+            std::map<std::string, unsigned short> getDevice() override;
 
-            std::vector<unsigned char> bulkRead(const int& size, const unsigned char& endpoint, const unsigned int& timeout) override;
+            unsigned char toWriteEndpoint(const unsigned char& endpoint) override;
+            unsigned char toReadEndpoint(const unsigned char& endpoint) override;
+
+            size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout, const bool& autoEndpointDirection) override;
+            size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) override;
+            size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint) override;
+
+            std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size, const bool& autoEndpointDirection) override;
+            std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size) override;
             std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout) override;
+            std::vector<unsigned char> bulkRead(const unsigned char& endpoint) override;
 
             void close() override;
 

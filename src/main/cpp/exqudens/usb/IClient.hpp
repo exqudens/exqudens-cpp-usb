@@ -45,10 +45,19 @@ namespace exqudens::usb {
 
             virtual bool isOpen() = 0;
 
-            virtual size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) = 0;
+            virtual std::map<std::string, unsigned short> getDevice() = 0;
 
-            virtual std::vector<unsigned char> bulkRead(const int& size, const unsigned char& endpoint, const unsigned int& timeout) = 0;
+            virtual unsigned char toWriteEndpoint(const unsigned char& endpoint) = 0;
+            virtual unsigned char toReadEndpoint(const unsigned char& endpoint) = 0;
+
+            virtual size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout, const bool& autoEndpointDirection) = 0;
+            virtual size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) = 0;
+            virtual size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint) = 0;
+
+            virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size, const bool& autoEndpointDirection) = 0;
+            virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size) = 0;
             virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout) = 0;
+            virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint) = 0;
 
             virtual void close() = 0;
 

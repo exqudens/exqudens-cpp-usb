@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
 
 set(USE_CONAN "true" CACHE BOOL "...")
 set(SKIP_TEST "false" CACHE BOOL "...")
-set(TEST_GROUP "*UnitTests.hpp" CACHE STRING "...")
+set(TEST_GROUP ".*UnitTests" CACHE STRING "...")
 set(TEST_CASE "all" CACHE STRING "...")
 
 block()
@@ -626,7 +626,7 @@ add_custom_target("conan-export"
             ${CONAN_OPTIONS}
             "${PROJECT_SOURCE_DIR}/conanfile.py"
             #"gitlab-group+gitlab-sub-group+${PROJECT_NAME}/stable"
-    DEPENDS "${CMAKE_INSTALL_PREFIX}/cmake/${PROJECT_NAME}-config.cmake"
+    DEPENDS "cmake-install"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     USES_TERMINAL
     VERBATIM

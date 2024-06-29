@@ -7,7 +7,7 @@
 
 #define CALL_INFO std::string(__FUNCTION__) + "(" + std::filesystem::path(__FILE__).filename().string() + ":" + std::to_string(__LINE__) + ")"
 #define LOGGER_ID "exqudens.usb.Client"
-#define LOGGER_LEVEL_WARNING 3
+#define LOGGER_LEVEL_ERROR 2
 #define LOGGER_LEVEL_DEBUG 5
 
 namespace exqudens::usb {
@@ -351,18 +351,18 @@ namespace exqudens::usb {
             try {
                 close();
             } catch (const std::exception& e) {
-                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_WARNING, "Error in destructor on call function: 'close': '" + std::string(e.what()) + "'");
+                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_ERROR, "Error in destructor on call function: 'close': '" + std::string(e.what()) + "'");
             } catch (...) {
-                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_WARNING, "Unknown error in destructor on call function: 'close'");
+                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_ERROR, "Unknown error in destructor on call function: 'close'");
             }
         }
         if (autoInit) {
             try {
                 destroy();
             } catch (const std::exception& e) {
-                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_WARNING, "Error in destructor on call function: 'destroy': '" + std::string(e.what()) + "'");
+                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_ERROR, "Error in destructor on call function: 'destroy': '" + std::string(e.what()) + "'");
             } catch (...) {
-                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_WARNING, "Unknown error in destructor on call function: 'destroy'");
+                log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_ERROR, "Unknown error in destructor on call function: 'destroy'");
             }
         }
     }
@@ -418,4 +418,4 @@ namespace exqudens::usb {
 
 #undef CALL_INFO
 #undef LOGGER_ID
-#undef LOGGER_LEVEL_WARNING
+#undef LOGGER_LEVEL_ERROR

@@ -35,6 +35,39 @@ namespace exqudens::usb {
 
     Client::Client(): Client({}, true, true) {}
 
+    std::string Client::getLoggerId() {
+        try {
+            return std::string(LOGGER_ID);
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    void Client::setLogFunction(
+            const std::function<void(
+                const std::string& file,
+                const size_t& line,
+                const std::string& function,
+                const std::string& id,
+                const unsigned short& level,
+                const std::string& message
+            )>& value //!< A log function.
+    ) {
+        try {
+            logFunction = value;
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    bool Client::isSetLogFunction() {
+        try {
+            return (bool) logFunction;
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
     void Client::init() {
         try {
             if (context == nullptr) {

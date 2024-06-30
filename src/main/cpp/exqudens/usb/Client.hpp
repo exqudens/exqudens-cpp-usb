@@ -42,6 +42,21 @@ namespace exqudens::usb {
             );
             Client();
 
+            std::string getLoggerId() override;
+
+            void setLogFunction(
+                    const std::function<void(
+                        const std::string& file,
+                        const size_t& line,
+                        const std::string& function,
+                        const std::string& id,
+                        const unsigned short& level,
+                        const std::string& message
+                    )>& value //!< A log function.
+            ) override;
+
+            bool isSetLogFunction() override;
+
             void init() override;
 
             bool isInitialized() override;

@@ -14,6 +14,21 @@ namespace exqudens::usb {
 
         public:
 
+            virtual std::string getLoggerId() = 0;
+
+            virtual void setLogFunction(
+                    const std::function<void(
+                        const std::string& file,
+                        const size_t& line,
+                        const std::string& function,
+                        const std::string& id,
+                        const unsigned short& level,
+                        const std::string& message
+                    )>& value //!< A log function.
+            ) = 0;
+
+            virtual bool isSetLogFunction() = 0;
+
             virtual void init() = 0;
 
             virtual bool isInitialized() = 0;

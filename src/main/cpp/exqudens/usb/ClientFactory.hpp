@@ -11,6 +11,8 @@ namespace exqudens::usb {
         public:
 
             static std::shared_ptr<IClient> createShared(
+                const bool& autoInit,
+                const bool& autoClose,
                 const std::function<void(
                     const std::string& file,
                     const size_t& line,
@@ -18,7 +20,10 @@ namespace exqudens::usb {
                     const std::string& id,
                     const unsigned short& level,
                     const std::string& message
-                )>& logFunction,
+                )>& logFunction
+            );
+
+            static std::shared_ptr<IClient> createShared(
                 const bool& autoInit,
                 const bool& autoClose
             );

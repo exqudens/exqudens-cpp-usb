@@ -9,6 +9,8 @@
 namespace exqudens::usb {
 
     std::shared_ptr<IClient> ClientFactory::createShared(
+        const bool& autoInit,
+        const bool& autoClose,
         const std::function<void(
             const std::string& file,
             const size_t& line,
@@ -16,13 +18,22 @@ namespace exqudens::usb {
             const std::string& id,
             const unsigned short& level,
             const std::string& message
-        )>& logFunction,
+        )>& logFunction
+    ) {
+        try {
+            std::shared_ptr<IClient> result(new Client(autoInit, autoClose, logFunction));
+            return result;
+        } catch (...) {
+            std::throw_with_nested(std::runtime_error(CALL_INFO));
+        }
+    }
+
+    std::shared_ptr<IClient> ClientFactory::createShared(
         const bool& autoInit,
         const bool& autoClose
     ) {
         try {
-            std::shared_ptr<IClient> result(new Client(logFunction, autoInit, autoClose));
-            return result;
+            return createShared(autoInit, autoClose, {});
         } catch (...) {
             std::throw_with_nested(std::runtime_error(CALL_INFO));
         }
@@ -30,7 +41,7 @@ namespace exqudens::usb {
 
     std::shared_ptr<IClient> ClientFactory::createShared() {
         try {
-            return createShared({}, true, true);
+            return createShared(true, true, {});
         } catch (...) {
             std::throw_with_nested(std::runtime_error(CALL_INFO));
         }

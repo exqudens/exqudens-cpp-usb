@@ -13,6 +13,8 @@
 namespace exqudens::usb {
 
     Client::Client(
+        const bool& autoInit,
+        const bool& autoClose,
         const std::function<void(
             const std::string& file,
             const size_t& line,
@@ -20,20 +22,20 @@ namespace exqudens::usb {
             const std::string& id,
             const unsigned short& level,
             const std::string& message
-        )>& logFunction,
-        const bool& autoInit,
-        const bool& autoClose
+        )>& logFunction
     ):
-        logFunction(logFunction),
         autoInit(autoInit),
-        autoClose(autoClose)
+        autoClose(autoClose),
+        logFunction(logFunction)
     {
         if (autoInit) {
             init();
         }
     }
 
-    Client::Client(): Client({}, true, true) {}
+    Client::Client(const bool& autoInit, const bool& autoClose): Client(autoInit, autoClose, {}) {}
+
+    Client::Client(): Client(true, true, {}) {}
 
     std::string Client::getLoggerId() {
         try {

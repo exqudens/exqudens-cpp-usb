@@ -29,6 +29,8 @@ namespace exqudens::usb {
         public:
 
             Client(
+                const bool& autoInit,
+                const bool& autoClose,
                 const std::function<void(
                     const std::string& file,
                     const size_t& line,
@@ -36,7 +38,9 @@ namespace exqudens::usb {
                     const std::string& id,
                     const unsigned short& level,
                     const std::string& message
-                )>& logFunction,
+                )>& logFunction
+            );
+            Client(
                 const bool& autoInit,
                 const bool& autoClose
             );

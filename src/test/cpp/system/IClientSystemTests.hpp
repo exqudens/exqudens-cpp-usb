@@ -44,7 +44,7 @@ namespace exqudens::usb {
             std::vector<unsigned char> bytes = {};
             size_t size = 0;
 
-            client = ClientFactory::createShared(&IClientSystemTests::log, true, true);
+            client = ClientFactory::createShared(true, true, &IClientSystemTests::log);
             devices = client->listDevices();
             for (size_t i = 0; i < devices.size(); i++) {
                 TEST_LOG_I(LOGGER_ID) << client->toString(devices.at(i));

@@ -15,6 +15,7 @@
         }
       }
     },
+
     {
       "name": "windows",
       "hidden": true,
@@ -36,6 +37,17 @@
       }
     },
     {
+        "name": "darwin",
+        "hidden": true,
+        "cmakeExecutable": "cmake",
+        "condition": {
+            "type": "equals",
+            "lhs": "${hostSystemName}",
+            "rhs": "Darwin"
+        }
+    },
+
+    {
       "name": "ninja",
       "hidden": true,
       "generator": "Ninja"
@@ -54,7 +66,7 @@
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": {
           "type": "FILEPATH",
-          "value": "../common/msvc-16-x64-x64-toolchain.cmake"
+          "value": "build/msvc-16-x64-x64-toolchain.cmake"
         }
       }
     },
@@ -64,7 +76,7 @@
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": {
           "type": "FILEPATH",
-          "value": "../common/gcc-toolchain.cmake"
+          "value": "build/gcc-toolchain.cmake"
         },
         "CONAN_COMPILER_LIBCXX": {
           "type": "STRING",

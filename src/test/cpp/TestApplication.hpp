@@ -1,13 +1,15 @@
 #pragma once
 
-class TestApplication {
+#include "test_lib_export.hpp"
 
-  private:
+class TEST_LIB_EXPORT TestApplication {
 
-    inline static const char* LOGGER_ID = "TestApplication";
+    private:
 
-  public:
+        inline static const char* LOGGER_ID = "TestApplication";
 
-    static int run(int argc, char** argv);
+    public:
+
+        static int run(int argc, char** argv);
 
 };

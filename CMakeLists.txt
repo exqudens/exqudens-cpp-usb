@@ -1,56 +1,73 @@
-cmake_minimum_required(VERSION 3.25 FATAL_ERROR)
+cmake_minimum_required(VERSION "3.25" FATAL_ERROR)
 
-set(USE_CONAN "true" CACHE BOOL "...")
-set(SKIP_TEST "false" CACHE BOOL "...")
+set(CMAKE_UTIL_FILE "" CACHE STRING "...")
+set(USE_CONAN "1" CACHE BOOL "...")
+
+message(STATUS "USE_CONAN: '${USE_CONAN}'")
+
+if("${USE_CONAN}")
+    if("windows" IN_LIST "PRESET_NAME_ELEMENTS")
+        find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+    else()
+        find_program(CONAN_COMMAND NAMES "conan" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
+    endif()
+endif()
+
+if("${CMAKE_UTIL_FILE}" STREQUAL "")
+    if("$ENV{CMAKE_UTIL_FILE}" STREQUAL "")
+        if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/dependencies/direct_deploy/exqudens-cmake/cmake/util.cmake")
+            if("${USE_CONAN}")
+                #[[execute_process(
+                    COMMAND "${CONAN_COMMAND}" "user" "$ENV{CONAN_LOGIN_USERNAME}" "-r" "artifactory" "-p"
+                    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+                    ENCODING "UTF-8"
+                    COMMAND_ERROR_IS_FATAL "ANY"
+                )]]
+                execute_process(
+                    COMMAND "${CONAN_COMMAND}" "install" "--tool-requires=exqudens-cmake/2.0.1" "--deployer" "direct_deploy" "--deployer-folder" "${CMAKE_SOURCE_DIR}/build/dependencies"
+                    COMMAND_ECHO "STDERR"
+                    ENCODING "UTF-8"
+                    COMMAND_ERROR_IS_FATAL "ANY"
+                )
+                set(CMAKE_UTIL_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/dependencies/direct_deploy/exqudens-cmake/cmake/util.cmake" CACHE STRING "..." FORCE)
+            else()
+                message(FATAL_ERROR "Unable to resolve CMAKE_UTIL_FILE: '${CMAKE_UTIL_FILE}'")
+            endif()
+        else()
+            set(CMAKE_UTIL_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/dependencies/direct_deploy/exqudens-cmake/cmake/util.cmake" CACHE STRING "..." FORCE)
+        endif()
+    else()
+        set(CMAKE_UTIL_FILE "$ENV{CMAKE_UTIL_FILE}" CACHE STRING "..." FORCE)
+    endif()
+endif()
+
+include("${CMAKE_UTIL_FILE}")
+
+set(SKIP_TEST "0" CACHE BOOL "...")
 set(TEST_GROUP ".*UnitTests" CACHE STRING "...")
 set(TEST_CASE "all" CACHE STRING "...")
 
-block()
-    set(fileName "util.cmake")
-    if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/../common/${fileName}")
-        file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}")
-        file(DOWNLOAD
-            "https://raw.githubusercontent.com/exqudens/exqudens-cmake/1.0.1/src/main/cmake/${fileName}"
-            "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}"
-            EXPECTED_MD5 "d7dd546adf3830d9eb6cca7b0dda7d4e"
-            STATUS downloadStatus
-        )
-        if(NOT "${downloadStatus}" STREQUAL "0;\"No error\"")
-            message(FATAL_ERROR "downloadStatus: '${downloadStatus}'")
-        endif()
-        file(COPY "${CMAKE_CURRENT_BINARY_DIR}/tmp/${fileName}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/../common")
-    endif()
-endblock()
-
-include("${CMAKE_CURRENT_BINARY_DIR}/../common/util.cmake")
-
 string(REPLACE "." ";" PRESET_NAME_ELEMENTS "${PRESET_NAME}")
 if("msvc-16-x64-x64" IN_LIST "PRESET_NAME_ELEMENTS")
-    if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/../common/msvc-16-x64-x64-toolchain.cmake")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/msvc-16-x64-x64-toolchain.cmake")
         set_msvc_toolchain(TOOLCHAIN_CONTENT
             PROCESSOR "x86_64"
             OS "${CMAKE_HOST_SYSTEM_NAME}"
             VERSION "16"
             HOST "x64"
             TARGET "x64"
-            OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/../common/msvc-16-x64-x64-toolchain.cmake"
+            OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/msvc-16-x64-x64-toolchain.cmake"
         )
     endif()
-    if("${USE_CONAN}")
-        find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
-    endif()
 elseif("gcc" IN_LIST PRESET_NAME_ELEMENTS)
-    if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/../common/gcc-toolchain.cmake")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-toolchain.cmake")
         find_file(COMPILER_FILE NAMES "gcc" PATHS ENV GCC_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
         set_gnu_toolchain(TOOLCHAIN_CONTENT
             PROCESSOR "x86_64"
             OS "${CMAKE_HOST_SYSTEM_NAME}"
             PATH "${COMPILER_FILE}"
-            OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/../common/gcc-toolchain.cmake"
+            OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/gcc-toolchain.cmake"
         )
-    endif()
-    if("${USE_CONAN}")
-        find_program(CONAN_COMMAND NAMES "conan" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
     endif()
 endif()
 
@@ -179,16 +196,15 @@ set(CONAN_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/conan-install")
 file(MAKE_DIRECTORY "${CONAN_INSTALL_PREFIX}/bin")
 file(MAKE_DIRECTORY "${CONAN_INSTALL_PREFIX}/lib")
 
-set(CONAN_INSTALL_TEST_PREFIX "${PROJECT_BINARY_DIR}/conan-install-test")
-
-file(MAKE_DIRECTORY "${CONAN_INSTALL_TEST_PREFIX}/bin")
-file(MAKE_DIRECTORY "${CONAN_INSTALL_TEST_PREFIX}/lib")
+file(MAKE_DIRECTORY "${CONAN_INSTALL_PREFIX}/test/bin")
+file(MAKE_DIRECTORY "${CONAN_INSTALL_PREFIX}/test/lib")
 
 if("${USE_CONAN}")
     set_conan_architecture(CONAN_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
     set_conan_compiler(CONAN_COMPILER "${CMAKE_CXX_COMPILER_ID}")
     set_conan_compiler_version(CONAN_COMPILER_VERSION "${CMAKE_CXX_COMPILER_ID}" "${CMAKE_CXX_COMPILER_VERSION}" MAX_ELEMENTS "1")
     set_conan_compiler_runtime(CONAN_COMPILER_RUNTIME "${CMAKE_MSVC_RUNTIME_LIBRARY}")
+    set_conan_compiler_runtime_type(CONAN_COMPILER_RUNTIME_TYPE "${CMAKE_MSVC_RUNTIME_LIBRARY}")
 
     set_python_boolean(CONAN_INTERFACE_ONLY "${INTERFACE_ONLY}")
     set_python_boolean(CONAN_BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS}")
@@ -198,18 +214,27 @@ if("${USE_CONAN}")
         "os=${CMAKE_SYSTEM_NAME}"
         "compiler=${CONAN_COMPILER}"
         "compiler.version=${CONAN_COMPILER_VERSION}"
+        "compiler.cstd=${CMAKE_C_STANDARD}"
+        "compiler.cppstd=${CMAKE_CXX_STANDARD}"
         "compiler.runtime=${CONAN_COMPILER_RUNTIME}"
+        "compiler.runtime_type=${CONAN_COMPILER_RUNTIME_TYPE}"
         "compiler.libcxx=${CONAN_COMPILER_LIBCXX}"
         "build_type=${CMAKE_BUILD_TYPE}"
     )
     set_conan_options(CONAN_OPTIONS
-        "interface=${CONAN_INTERFACE_ONLY}"
-        "shared=${CONAN_BUILD_SHARED_LIBS}"
+        "&:shared=${CONAN_BUILD_SHARED_LIBS}"
+        "*:shared=${CONAN_BUILD_SHARED_LIBS}"
     )
     if(NOT EXISTS "${CONAN_INSTALL_PREFIX}/conan-packages.cmake")
+        #[[execute_process(
+            COMMAND "${CONAN_COMMAND}" "user" "$ENV{CONAN_LOGIN_USERNAME}" "-r" "artifactory" "-p"
+            WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+            ENCODING "UTF-8"
+            COMMAND_ERROR_IS_FATAL "ANY"
+        )]]
         execute_process(
             COMMAND "${CONAN_COMMAND}" "install"
-                    "--install-folder" "${CONAN_INSTALL_PREFIX}"
+                    "--output-folder" "${CONAN_INSTALL_PREFIX}"
                     ${CONAN_SETTINGS}
                     ${CONAN_OPTIONS}
                     "${PROJECT_SOURCE_DIR}/conanfile.py"
@@ -263,10 +288,16 @@ if("${USE_CONAN}")
         list(APPEND CMAKE_PREFIX_PATH "${cmakePackagePath}")
     endforeach()
     if(NOT "${SKIP_TEST}")
-        if(NOT EXISTS "${CONAN_INSTALL_TEST_PREFIX}/conan-packages.cmake")
+        if(NOT EXISTS "${CONAN_INSTALL_PREFIX}/test/conan-packages.cmake")
+            #[[execute_process(
+                COMMAND "${CONAN_COMMAND}" "user" "$ENV{CONAN_LOGIN_USERNAME}" "-r" "artifactory" "-p"
+                WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+                ENCODING "UTF-8"
+                COMMAND_ERROR_IS_FATAL "ANY"
+            )]]
             execute_process(
                 COMMAND "${CONAN_COMMAND}" "install"
-                        "--install-folder" "${CONAN_INSTALL_TEST_PREFIX}"
+                        "--output-folder" "${CONAN_INSTALL_PREFIX}/test"
                         ${CONAN_SETTINGS}
                         ${CONAN_OPTIONS}
                         "${PROJECT_SOURCE_DIR}/test-conanfile.py"
@@ -275,11 +306,11 @@ if("${USE_CONAN}")
                 COMMAND_ERROR_IS_FATAL "ANY"
             )
         endif()
-        if(NOT EXISTS "${CONAN_INSTALL_TEST_PREFIX}/conan-packages.cmake")
-            message(FATAL_ERROR "Not exists: '${CONAN_INSTALL_TEST_PREFIX}/conan-packages.cmake'")
+        if(NOT EXISTS "${CONAN_INSTALL_PREFIX}/test/conan-packages.cmake")
+            message(FATAL_ERROR "Not exists: '${CONAN_INSTALL_PREFIX}/test/conan-packages.cmake'")
         endif()
-        include("${CONAN_INSTALL_TEST_PREFIX}/conan-packages.cmake")
-        list(APPEND CMAKE_MODULE_PATH "${CONAN_INSTALL_TEST_PREFIX}")
+        include("${CONAN_INSTALL_PREFIX}/test/conan-packages.cmake")
+        list(APPEND CMAKE_MODULE_PATH "${CONAN_INSTALL_PREFIX}/test")
         foreach(
             conanPackageName
             cmakePackageName
@@ -329,7 +360,7 @@ if("${${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES}" STREQUAL "")
     if(NOT "${SKIP_TEST}")
         list(APPEND "${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES"
             "GTest"
-            "Easyloggingpp"
+            "exqudens-cpp-log"
         )
     endif()
 endif()
@@ -340,19 +371,22 @@ endforeach()
 unset(NOT_FOUND_PACKAGE_NAMES)
 foreach(cmakePackageName IN LISTS "${PROJECT_NAME}_CMAKE_FIND_PACKAGE_NAMES")
     if("libusb" STREQUAL "${cmakePackageName}")
-        file(REMOVE "${CONAN_INSTALL_TEST_PREFIX}/Find${cmakePackageName}.cmake")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/${cmakePackageName}Config.cmake")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/${cmakePackageName}-config.cmake")
         list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
         find_package("${cmakePackageName}" "${${PROJECT_NAME}_CMAKE_PACKAGE_${cmakePackageName}_VERSION}" EXACT QUIET)
     elseif("GTest" STREQUAL "${cmakePackageName}")
-        file(REMOVE "${CONAN_INSTALL_TEST_PREFIX}/Find${cmakePackageName}.cmake")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}Config.cmake")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}-config.cmake")
         list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
         find_package("${cmakePackageName}" "${${PROJECT_NAME}_CMAKE_PACKAGE_${cmakePackageName}_VERSION}" EXACT QUIET)
-    elseif("Easyloggingpp" STREQUAL "${cmakePackageName}")
-        file(REMOVE "${CONAN_INSTALL_TEST_PREFIX}/Find${cmakePackageName}.cmake")
+    elseif("exqudens-cpp-log" STREQUAL "${cmakePackageName}")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}Config.cmake")
+        file(REMOVE "${CONAN_INSTALL_PREFIX}/test/${cmakePackageName}-config.cmake")
         list(APPEND NOT_FOUND_PACKAGE_NAMES "${cmakePackageName}")
         find_package("${cmakePackageName}" "${${PROJECT_NAME}_CMAKE_PACKAGE_${cmakePackageName}_VERSION}" EXACT QUIET)
     else()
-        message("Ignore cmakePackageName: '${cmakePackageName}'")
+        message(WARNING "Ignore cmakePackageName: '${cmakePackageName}'")
     endif()
 endforeach()
 set_not_found_package_names(NOT_FOUND_PACKAGE_NAMES ${NOT_FOUND_PACKAGE_NAMES})
@@ -504,18 +538,20 @@ install(
 )
 
 if(NOT "${SKIP_TEST}")
-    add_library("test-lib" STATIC
-        "src/test/cpp/TestConfig.hpp"
-        "src/test/cpp/TestConfig.cpp"
-        "src/test/cpp/TestLog.hpp"
-        "src/test/cpp/TestLog.cpp"
+    add_library("test-lib"
         "src/test/cpp/TestUtils.hpp"
         "src/test/cpp/TestUtils.cpp"
         "src/test/cpp/TestApplication.hpp"
         "src/test/cpp/TestApplication.cpp"
         "src/test/cpp/unit/IClientUnitTests.hpp"
+        "src/test/cpp/system/IClientSystemTests.hpp"
+    )
+    generate_export_header("test-lib"
+        BASE_NAME "TEST_LIB"
+        EXPORT_FILE_NAME "generated/src/test/cpp/test_lib_export.hpp"
     )
     target_include_directories("test-lib" PUBLIC
+        "$<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/generated/src/test/cpp>"
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/test/cpp>"
         "$<INSTALL_INTERFACE:include>"
     )
@@ -525,7 +561,7 @@ if(NOT "${SKIP_TEST}")
         "GTest::gtest"
         "GTest::gmock_main"
         "GTest::gtest_main"
-        "Easyloggingpp::Easyloggingpp"
+        "exqudens-cpp-log::exqudens-cpp-log"
     )
     set_target_properties("test-lib" PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY                "${PROJECT_BINARY_DIR}/test/bin"
@@ -576,7 +612,7 @@ if(NOT "${SKIP_TEST}")
                 PRE_BUILD
                 COMMAND "${CMAKE_COMMAND}" -E copy_directory "$<TARGET_PROPERTY:${PROJECT_NAME},RUNTIME_OUTPUT_DIRECTORY>" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
                 COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CONAN_INSTALL_PREFIX}/bin" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
-                COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CONAN_INSTALL_TEST_PREFIX}/bin" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
+                COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CONAN_INSTALL_PREFIX}/test/bin" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
                 WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
                 USES_TERMINAL
                 VERBATIM
@@ -586,31 +622,44 @@ if(NOT "${SKIP_TEST}")
                 PRE_BUILD
                 COMMAND "${CMAKE_COMMAND}" -E copy_directory "$<TARGET_PROPERTY:${PROJECT_NAME},LIBRARY_OUTPUT_DIRECTORY>" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
                 COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CONAN_INSTALL_PREFIX}/lib" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
-                COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CONAN_INSTALL_TEST_PREFIX}/lib" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
+                COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CONAN_INSTALL_PREFIX}/test/lib" "$<TARGET_PROPERTY:test-app,RUNTIME_OUTPUT_DIRECTORY>"
                 WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
                 USES_TERMINAL
                 VERBATIM
             )
         endif()
     endif()
-
-    gtest_discover_tests("test-app"
-        EXTRA_ARGS "--logging-config" "${PROJECT_SOURCE_DIR}/src/test/resources/logging-config.txt"
-        WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/test/bin"
-        PROPERTIES XML_OUTPUT_DIR "${PROJECT_BINARY_DIR}/test/report/xml"
-                   #ENVIRONMENT "PARENT_PATH=;PATH="
+    add_custom_command(TARGET "test-app"
+        POST_BUILD
+        COMMAND "$<TARGET_FILE:test-app>" "--gtest_list_tests" "--gtest_output=json:tests.json" "--project-binary-dir=${PROJECT_BINARY_DIR}"
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:test-app>"
+        USES_TERMINAL
+        VERBATIM
     )
 
-    add_custom_target("cmake-test"
-        COMMAND "${CMAKE_CTEST_COMMAND}" --preset "${PRESET_NAME}" "-R" "${TEST_REGEXP}"
+    gtest_discover_tests("test-app"
+        DISCOVERY_EXTRA_ARGS "--project-binary-dir=${PROJECT_BINARY_DIR}"
+        EXTRA_ARGS "--project-binary-dir=${PROJECT_BINARY_DIR}"
+        WORKING_DIRECTORY "$<TARGET_FILE_DIR:test-app>"
+        PROPERTIES ENVIRONMENT "PATH=$<TARGET_FILE_DIR:test-app>;${ENV_PATH}"
+    )
+
+    add_custom_command(
+        OUTPUT "${PROJECT_BINARY_DIR}/junit.xml"
+        COMMAND "${CMAKE_CTEST_COMMAND}" "--build-nocmake" "--output-junit" "${PROJECT_BINARY_DIR}/junit.xml" "--preset" "${PRESET_NAME}" "-R" "${TEST_REGEXP}"
         DEPENDS "test-app"
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
         USES_TERMINAL
         VERBATIM
     )
+
+    add_custom_target("cmake-test"
+        DEPENDS "${PROJECT_BINARY_DIR}/junit.xml"
+    )
 endif()
 
-add_custom_target("cmake-install" ALL
+add_custom_command(
+    OUTPUT "${CMAKE_INSTALL_PREFIX}/cmake/${PROJECT_NAME}-config.cmake"
     COMMAND "${CMAKE_COMMAND}" --install "${PROJECT_BINARY_DIR}" --prefix "${CMAKE_INSTALL_PREFIX}"
     DEPENDS ${TARGET_CMAKE_INSTALL_DEPENDS_ON}
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
@@ -618,15 +667,52 @@ add_custom_target("cmake-install" ALL
     VERBATIM
 )
 
-add_custom_target("conan-export"
-    COMMAND "${CONAN_COMMAND}" "export-pkg"
-            "--force"
-            "--package-folder" "${CMAKE_INSTALL_PREFIX}"
-            ${CONAN_SETTINGS}
-            ${CONAN_OPTIONS}
-            "${PROJECT_SOURCE_DIR}/conanfile.py"
-            #"gitlab-group+gitlab-sub-group+${PROJECT_NAME}/stable"
-    DEPENDS "cmake-install"
+add_custom_target("cmake-install" ALL
+    DEPENDS "${CMAKE_INSTALL_PREFIX}/cmake/${PROJECT_NAME}-config.cmake"
+)
+
+if("${USE_CONAN}")
+    add_custom_target("conan-export"
+        COMMAND "${CONAN_COMMAND}" "export-pkg"
+                "--output-folder" "${CMAKE_INSTALL_PREFIX}"
+                ${CONAN_SETTINGS}
+                ${CONAN_OPTIONS}
+                #"--user" "gitlab-group+gitlab-sub-group+${PROJECT_NAME}"
+                #"--channel" "stable"
+                "${PROJECT_SOURCE_DIR}/conanfile.py"
+        DEPENDS "cmake-install"
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        USES_TERMINAL
+        VERBATIM
+    )
+
+    add_custom_target("conan-remove"
+        COMMAND "${CONAN_COMMAND}" "remove" "-c" "${PROJECT_NAME}/${PROJECT_VERSION}"
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        USES_TERMINAL
+        VERBATIM
+    )
+
+    add_custom_target("conan-list"
+        COMMAND "${CONAN_COMMAND}" "list" "${PROJECT_NAME}/${PROJECT_VERSION}:*"
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        USES_TERMINAL
+        VERBATIM
+    )
+endif()
+
+add_custom_target("vscode"
+    COMMAND "${CMAKE_COMMAND}" "-P" "cmake/util.cmake" "--" "vscode"
+            SOURCE_DIR "${PROJECT_SOURCE_DIR}"
+            BINARY_DIR "${PROJECT_BINARY_DIR}"
+
+            LAUNCH_GENERATE "1"
+            LAUNCH_FILE_OVERWRITE "1"
+            LAUNCH_TEMPLATE_FILE "${PROJECT_SOURCE_DIR}/src/test/resources/vscode/launch.json"
+            LAUNCH_FILE "${PROJECT_SOURCE_DIR}/.vscode/launch.json"
+            LAUNCH_TESTS_FILE "${PROJECT_BINARY_DIR}/test/bin/tests.json"
+            LAUNCH_DEFAULT_TEST "IClientUnitTests.test1"
+    DEPENDS "test-app"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     USES_TERMINAL
     VERBATIM
@@ -644,20 +730,3 @@ set("${PROJECT_NAME}_ADDITIONAL_CLEAN_FILES"
 set_directory_properties(PROPERTIES
     ADDITIONAL_CLEAN_FILES "${${PROJECT_NAME}_ADDITIONAL_CLEAN_FILES}"
 )
-
-# Generate vscode files if env var VSCODE value is "true"
-if("$ENV{VSCODE}")
-    include("${PROJECT_SOURCE_DIR}/cmake/vscode.cmake")
-    if("$ENV{VSCODE_SETTINGS}")
-        vscode(SETTINGS_FILE "${PROJECT_SOURCE_DIR}/.vscode/settings.json")
-    endif()
-    if("$ENV{VSCODE_C_CPP_PROPERTIES}")
-        vscode(C_CPP_PROPERTIES_FILE "${PROJECT_SOURCE_DIR}/.vscode/c_cpp_properties.json")
-    endif()
-    if("$ENV{VSCODE_TASKS}")
-        vscode(TASKS_FILE "${PROJECT_SOURCE_DIR}/.vscode/tasks.json")
-    endif()
-    if("$ENV{VSCODE_LAUNCH}")
-        vscode(LAUNCH_FILE "${PROJECT_SOURCE_DIR}/.vscode/launch.json")
-    endif()
-endif()

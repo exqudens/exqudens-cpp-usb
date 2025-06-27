@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstdint>
 #include <cctype>
 #include <stdexcept>
 #include <filesystem>
@@ -10,6 +11,81 @@
 #include "TestUtils.hpp"
 
 #define CALL_INFO std::string(__FUNCTION__) + "(" + std::filesystem::path(__FILE__).filename().string() + ":" + std::to_string(__LINE__) + ")"
+
+void TestUtils::init(const std::vector<std::string>& input) {
+    try {
+        for (size_t i = 0; i < input.size(); i++) {
+            if (!data.executableFile.has_value() && i == 0) {
+                std::filesystem::path path = std::filesystem::path(input.at(i));
+                data.executableFile = path.generic_string();
+                if (!path.parent_path().empty()) {
+                    data.executableDir = path.parent_path().generic_string();
+                }
+            }
+            if (!data.projectBinaryDir.has_value() && i != 0 && input.at(i).starts_with("--project-binary-dir=")) {
+                std::vector<std::string> parts = split(input.at(i), "=");
+                if (parts.size() > 1) {
+                    std::filesystem::path path = std::filesystem::path(parts.at(1));
+                    data.projectBinaryDir = path.generic_string();
+                }
+            }
+        }
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::getExecutableFile() {
+    try {
+        return data.executableFile.value();
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::getExecutableDir() {
+    try {
+        return data.executableDir.value();
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::getProjectBinaryDir() {
+    try {
+        return data.projectBinaryDir.value();
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::getTestOutputDir(const std::string& testGroup, const std::string& testCase) {
+    try {
+        std::filesystem::path result(getProjectBinaryDir());
+        result = result / "test" / "output" / testGroup / testCase;
+        return result.generic_string();
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::getProjectSourceDir() {
+    try {
+        return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().generic_string();
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::getTestInputDir(const std::string& testGroup, const std::string& testCase) {
+    try {
+        std::filesystem::path result(getProjectSourceDir());
+        result = result / "src" / "test" / "resources" / testGroup / testCase;
+        return result.generic_string();
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
 
 std::vector<std::string> TestUtils::toStringVector(
         const std::exception& exception,
@@ -214,6 +290,99 @@ std::string TestUtils::join(const std::vector<std::string>& value, const std::st
                 }
         );
         result = prefix + result + suffix;
+        return result;
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::toString(const std::vector<std::string>& value) {
+    try {
+        return TestUtils::join(value, "', '", "['", "']");
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::toString(const std::any& value) {
+    try {
+        std::ostringstream out;
+        if (typeid(nullptr_t) == value.type()) {
+            nullptr_t v = std::any_cast<nullptr_t>(value);
+            out << '"';
+            out << "nullptr";
+            out << '"';
+        } else if (typeid(intmax_t) == value.type()) {
+            intmax_t v = std::any_cast<intmax_t>(value);
+            out << '"';
+            out << v;
+            out << '"';
+        } else if (typeid(size_t) == value.type()) {
+            size_t v = std::any_cast<size_t>(value);
+            out << '"';
+            out << v;
+            out << '"';
+        } else if (typeid(long double) == value.type()) {
+            long double v = std::any_cast<long double>(value);
+            out << '"';
+            out << v;
+            out << '"';
+        } else if (typeid(const char *) == value.type()) {
+            const char * v = std::any_cast<const char *>(value);
+            out << '"';
+            out << v;
+            out << '"';
+        } else if (typeid(std::string) == value.type()) {
+            std::string v = std::any_cast<std::string>(value);
+            out << '"';
+            out << v;
+            out << '"';
+        } else if (typeid(std::map<std::string, std::any>) == value.type()) {
+            std::map<std::string, std::any> v = std::any_cast<std::map<std::string, std::any>>(value);
+            out << toString(v);
+        } else if (typeid(std::vector<std::any>) == value.type()) {
+            std::vector<std::any> v = std::any_cast<std::vector<std::any>>(value);
+            out << toString(v);
+        } else {
+            throw std::runtime_error(CALL_INFO + ": unsupported type: '" + value.type().name() + "'");
+        }
+        return out.str();
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::toString(const std::map<std::string, std::any>& value) {
+    try {
+        std::string result = "{";
+        size_t i = 0;
+        for (const std::pair<std::string, std::any>& entry : value) {
+            i++;
+            result += "'";
+            result += entry.first;
+            result += "': ";
+            result += toString(entry.second);
+            if (i != value.size()) {
+                result += ", ";
+            }
+        }
+        result += "}";
+        return result;
+    } catch (...) {
+        std::throw_with_nested(std::runtime_error(CALL_INFO));
+    }
+}
+
+std::string TestUtils::toString(const std::vector<std::any>& value) {
+    try {
+        std::string result = "[";
+        for (size_t i = 0; i < value.size(); i++) {
+            result += toString(value.at(i));
+            if (i + 1 != value.size()) {
+                result += ", ";
+            }
+        }
+        result += "]";
         return result;
     } catch (...) {
         std::throw_with_nested(std::runtime_error(CALL_INFO));

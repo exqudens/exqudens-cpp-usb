@@ -1,14 +1,16 @@
 #pragma once
 
 #include <string>
+#include <vector>
+#include <map>
 #include <memory>
 #include <filesystem>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <exqudens/Log.hpp>
 
 #include "TestUtils.hpp"
-#include "TestLog.hpp"
 #include "exqudens/usb/ClientFactory.hpp"
 
 namespace exqudens::usb {
@@ -17,7 +19,28 @@ namespace exqudens::usb {
 
         protected:
 
-            inline static const char* LOGGER_ID = "exqudens.usb.IClientUnitTests";
+            inline static const char* LOGGER_ID = "IClientUnitTests";
+
+            inline static std::vector<std::map<std::string, std::string>> events = {};
+
+            static void log(
+                const std::string& file,
+                const size_t& line,
+                const std::string& function,
+                const std::string& id,
+                const unsigned short& level,
+                const std::string& message
+            ) {
+                std::map<std::string, std::string> event = {
+                    {"file", file},
+                    {"line", std::to_string(line)},
+                    {"function", function},
+                    {"id", id},
+                    {"level", std::to_string(level)},
+                    {"message", message}
+                };
+                events.emplace_back(event);
+            }
 
     };
 
@@ -25,25 +48,42 @@ namespace exqudens::usb {
         try {
             std::string testGroup = testing::UnitTest::GetInstance()->current_test_info()->test_suite_name();
             std::string testCase = testing::UnitTest::GetInstance()->current_test_info()->name();
-            TEST_LOG_I(LOGGER_ID) << "'" << testGroup << "." << testCase << "' start";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' bgn";
 
-            std::filesystem::path file = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path().parent_path() / "name-version.txt";
-            TEST_LOG_I(LOGGER_ID) << "file: '" << file.generic_string() << "'";
-            std::string expected = TestUtils::readFileString(file.generic_string());
+            std::shared_ptr<IClient> client = {};
+            std::string expected = {};
+            std::string actual = {};
+
+            client = ClientFactory::createShared();
+
+            client->setLogFunction(log);
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "client.isSetLogFunction: " << client->isSetLogFunction();
+
+            ASSERT_TRUE(client->isSetLogFunction());
+
+            expected = TestUtils::readFileString((std::filesystem::path(TestUtils::getProjectSourceDir()) / "name-version.txt").generic_string());
             expected = TestUtils::split(expected, ":").at(1);
             expected = TestUtils::trim(expected);
-            TEST_LOG_I(LOGGER_ID) << "expected: '" << expected << "'";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "expected: '" << expected << "'";
 
-            std::shared_ptr<IClient> client = ClientFactory::createShared();
-            std::string actual = client->getVersion();
-            TEST_LOG_I(LOGGER_ID) << "actual: '" << actual << "'";
+            actual = client->getVersion();
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "actual: '" << actual << "'";
 
             ASSERT_EQ(expected, actual);
 
-            TEST_LOG_I(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "events.size: " << events.size();
+
+            ASSERT_FALSE(events.empty());
+
+            actual = events.front().at("message");
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "actual: '" << actual << "'";
+
+            ASSERT_EQ(expected, actual);
+
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
         } catch (const std::exception& e) {
             std::string errorMessage = TestUtils::toString(e);
-            TEST_LOG_E(LOGGER_ID) << errorMessage;
+            EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
             FAIL() << errorMessage;
         }
     }

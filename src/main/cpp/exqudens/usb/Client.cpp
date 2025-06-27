@@ -98,7 +98,13 @@ namespace exqudens::usb {
 
     std::string Client::getVersion() {
         try {
-            return std::to_string(PROJECT_VERSION_MAJOR) + "." + std::to_string(PROJECT_VERSION_MINOR) + "." + std::to_string(PROJECT_VERSION_PATCH);
+            std::string result = std::to_string(PROJECT_VERSION_MAJOR);
+            result += ".";
+            result += std::to_string(PROJECT_VERSION_MINOR);
+            result += ".";
+            result += std::to_string(PROJECT_VERSION_PATCH);
+            log(__FILE__, __LINE__, __FUNCTION__, LOGGER_ID, LOGGER_LEVEL_DEBUG, result);
+            return result;
         } catch (...) {
             std::throw_with_nested(std::runtime_error(CALL_INFO));
         }

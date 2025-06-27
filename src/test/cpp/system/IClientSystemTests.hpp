@@ -2,9 +2,9 @@
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <exqudens/Log.hpp>
 
 #include "TestUtils.hpp"
-#include "TestLog.hpp"
 #include "exqudens/usb/ClientFactory.hpp"
 
 namespace exqudens::usb {
@@ -13,7 +13,7 @@ namespace exqudens::usb {
 
         protected:
 
-            inline static const char* LOGGER_ID = "exqudens.usb.IClientSystemTests";
+            inline static const char* LOGGER_ID = "IClientSystemTests";
 
         public:
 
@@ -25,7 +25,7 @@ namespace exqudens::usb {
                 const unsigned short& level,
                 const std::string& message
             ) {
-                TestLog::Writer(file, line, function, id, level) << message;
+                exqudens::log::api::Logging::Writer(file, line, function, id, level) << message;
             }
 
     };
@@ -34,7 +34,7 @@ namespace exqudens::usb {
         try {
             std::string testGroup = testing::UnitTest::GetInstance()->current_test_info()->test_suite_name();
             std::string testCase = testing::UnitTest::GetInstance()->current_test_info()->name();
-            TEST_LOG_I(LOGGER_ID) << "'" << testGroup << "." << testCase << "' start";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' bgn";
 
             std::shared_ptr<IClient> client = nullptr;
             std::vector<std::map<std::string, unsigned short>> devices = {};
@@ -47,8 +47,8 @@ namespace exqudens::usb {
             client = ClientFactory::createShared(true, true, &IClientSystemTests::log);
             devices = client->listDevices();
             for (size_t i = 0; i < devices.size(); i++) {
-                TEST_LOG_I(LOGGER_ID) << client->toString(devices.at(i));
-                if (devices.at(i).at("vendor") == 0x0483 && devices.at(i).at("product") == 0x5741) {
+                EXQUDENS_LOG_INFO(LOGGER_ID) << client->toString(devices.at(i));
+                if (devices.at(i).at("vendor") == 0x0484 && devices.at(i).at("product") == 0x5741) {
                     device = devices.at(i);
                     break;
                 }
@@ -64,8 +64,8 @@ namespace exqudens::usb {
             } catch (const std::exception& e) {
                 stackTrace = TestUtils::toStackTrace(e);
             }
-            TEST_LOG_I(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
-            TEST_LOG_I(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
 
             ASSERT_TRUE(bytes.empty());
             ASSERT_FALSE(stackTrace.empty());
@@ -79,7 +79,7 @@ namespace exqudens::usb {
             data = "abc";
             bytes = std::vector<unsigned char>(data.begin(), data.end());
             size = client->bulkWrite(bytes, 1);
-            TEST_LOG_I(LOGGER_ID) << "size: " << size;
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "size: " << size;
 
             ASSERT_EQ(3, size);
 
@@ -90,7 +90,7 @@ namespace exqudens::usb {
 
             bytes = client->bulkRead(1);
             data = std::string(bytes.begin(), bytes.end());
-            TEST_LOG_I(LOGGER_ID) << "data: '" << data << "'";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "data: '" << data << "'";
 
             ASSERT_EQ(std::string("ABC"), data);
 
@@ -104,8 +104,8 @@ namespace exqudens::usb {
             } catch (const std::exception& e) {
                 stackTrace = TestUtils::toStackTrace(e);
             }
-            TEST_LOG_I(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
-            TEST_LOG_I(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
 
             ASSERT_TRUE(bytes.empty());
             ASSERT_FALSE(stackTrace.empty());
@@ -115,10 +115,10 @@ namespace exqudens::usb {
             ASSERT_FALSE(client->isOpen());
             ASSERT_TRUE(client->getDevice().empty());
 
-            TEST_LOG_I(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
         } catch (const std::exception& e) {
             std::string errorMessage = TestUtils::toString(e);
-            TEST_LOG_E(LOGGER_ID) << errorMessage;
+            EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
             FAIL() << errorMessage;
         }
     }

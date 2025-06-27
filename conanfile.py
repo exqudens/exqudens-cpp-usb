@@ -1,104 +1,99 @@
-import logging
 from pathlib import Path
-from conans import ConanFile, tools
-from conans.util.files import save
 
+required_conan_version = ">=2.0"
 
-required_conan_version = ">=1.43.0"
-
+from conan import ConanFile
+from conan.tools.files import copy, save, collect_libs
 
 class ConanConfiguration(ConanFile):
     settings = "arch", "os", "compiler", "build_type"
-    options = {"interface": [True, False], "shared": [True, False]}
-    default_options = {"interface": False, "shared": True}
-    generators = "cmake_find_package"
+    options = {"shared": [True, False]}
+    default_options = {"shared": True}
 
     def set_name(self):
         try:
             self.name = Path(__file__).parent.joinpath('name-version.txt').read_text().split(':')[0].strip()
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.output.error(e)
             raise e
 
     def set_version(self):
         try:
             self.version = Path(__file__).parent.joinpath('name-version.txt').read_text().split(':')[1].strip()
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.output.error(e)
             raise e
 
     def requirements(self):
         try:
             self.requires("libusb/1.0.26")
         except Exception as e:
-            logging.error(e, exc_info=True)
-            raise e
-
-    def configure(self):
-        try:
-            self.options["libusb"].shared = self.options.shared
-        except Exception as e:
-            logging.error(e, exc_info=True)
+            self.output.error(e)
             raise e
 
     def generate(self):
         try:
-            filename = 'conan-packages.cmake'
-            content = ''
+            filename: str = 'conan-packages.cmake'
+            content: str = ''
+            cmake_package_name_property: str = 'cmake_file_name'
 
             content += 'set("${PROJECT_NAME}_CONAN_PACKAGE_NAMES"\n'
-            for dep_name in self.deps_cpp_info.deps:
-                content += '    "' + dep_name + '"' + '\n'
+            for dep in self.dependencies.values():
+                content += f'    "{dep.ref.name}"\n'
             content += ')\n'
 
             content += 'set("${PROJECT_NAME}_CMAKE_PACKAGE_NAMES"\n'
-            for dep_name, dep in self.deps_cpp_info.dependencies:
-                content += '    "' + dep.get_name('cmake_find_package') + '" # ' + dep_name + '\n'
+            for dep in self.dependencies.values():
+                content += f'    "{dep.cpp_info.get_property(cmake_package_name_property, check_type=str)}" # {dep.ref.name}\n'
             content += ')\n'
 
             content += 'set("${PROJECT_NAME}_CMAKE_PACKAGE_VERSIONS"\n'
-            for dep_name, dep in self.deps_cpp_info.dependencies:
-                content += '    "' + str(dep.version) + '" # ' + dep_name + '\n'
+            for dep in self.dependencies.values():
+                content += f'    "{dep.ref.version}" # {dep.ref.name}\n'
             content += ')\n'
 
             content += 'set("${PROJECT_NAME}_CMAKE_PACKAGE_PATHS"\n'
-            for dep_name, dep in self.deps_cpp_info.dependencies:
-                content += '    "' + dep.rootpath.replace('\\', '/') + '" # ' + dep_name + '\n'
+            for dep in self.dependencies.values():
+                content += f'    "{Path(dep.package_folder).as_posix()}" # {dep.ref.name}\n'
             content += ')\n'
 
-            save(filename, content)
+            save(self, filename, content)
+
+            for dep in self.dependencies.values():
+                for dir in dep.cpp_info.bindirs:
+                    copy(self, pattern="*.dll", src=dir, dst=Path(self.build_folder).joinpath("bin").as_posix())
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.output.error(e)
             raise e
 
-    def imports(self):
+    def package(self):
         try:
-            self.copy(pattern="*.dll", dst="bin", src="bin")
-            self.copy(pattern="*.so", dst="lib", src="lib")
-            self.copy(pattern="*.so.*", dst="lib", src="lib")
-            self.copy(pattern="*.dylib", dst="lib", src="lib")
+            build_folder_path: Path = Path(self.build_folder)
+            package_folder_path: Path = Path(self.package_folder)
+
+            src: str = build_folder_path.joinpath("include").as_posix()
+            dst: str = package_folder_path.joinpath("include").as_posix()
+            copy(self, pattern="*.*", src=src, dst=dst)
+
+            src: str = build_folder_path.joinpath("cmake").as_posix()
+            dst: str = package_folder_path.joinpath("cmake").as_posix()
+            copy(self, pattern="*.*", src=src, dst=dst)
+
+            src: str = build_folder_path.joinpath("lib").as_posix()
+            dst: str = package_folder_path.joinpath("lib").as_posix()
+            copy(self, pattern="*.*", src=src, dst=dst)
+
+            src: str = build_folder_path.joinpath("bin").as_posix()
+            dst: str = package_folder_path.joinpath("bin").as_posix()
+            copy(self, pattern="*.*", src=src, dst=dst)
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.output.error(e)
             raise e
 
     def package_info(self):
         try:
-            if self.options.interface:
-                self.cpp_info.libs = []
-            else:
-                self.cpp_info.libs = tools.collect_libs(self)
+            self.cpp_info.set_property("cmake_file_name", self.name)
+            self.cpp_info.libs = collect_libs(self)
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.output.error(e)
             raise e
-
-    def package_id(self):
-        try:
-            if self.options.interface:
-                self.info.header_only()
-        except Exception as e:
-            logging.error(e, exc_info=True)
-            raise e
-
-
-if __name__ == "__main__":
-    pass

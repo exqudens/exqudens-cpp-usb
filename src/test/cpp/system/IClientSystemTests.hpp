@@ -11,7 +11,7 @@ namespace exqudens::usb {
 
     class IClientSystemTests: public testing::Test {
 
-        protected:
+        public:
 
             inline static const char* LOGGER_ID = "IClientSystemTests";
 

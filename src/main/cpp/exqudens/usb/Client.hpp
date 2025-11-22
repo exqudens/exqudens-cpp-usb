@@ -10,6 +10,10 @@ namespace exqudens::usb {
 
     class EXQUDENS_USB_EXPORT Client: public virtual IClient {
 
+        public:
+
+            inline static const char* LOGGER_ID = "exqudens.usb.Client";
+
         private:
 
             std::function<void(

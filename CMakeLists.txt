@@ -5,6 +5,8 @@ set(USE_CONAN "1" CACHE BOOL "...")
 
 message(STATUS "USE_CONAN: '${USE_CONAN}'")
 
+string(REPLACE "." ";" PRESET_NAME_ELEMENTS "${PRESET_NAME}")
+
 if("${USE_CONAN}")
     if("windows" IN_LIST "PRESET_NAME_ELEMENTS")
         find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
@@ -24,7 +26,7 @@ if("${CMAKE_UTIL_FILE}" STREQUAL "")
                     COMMAND_ERROR_IS_FATAL "ANY"
                 )]]
                 execute_process(
-                    COMMAND "${CONAN_COMMAND}" "install" "--tool-requires=exqudens-cmake/2.0.1" "--deployer" "direct_deploy" "--deployer-folder" "${CMAKE_SOURCE_DIR}/build/dependencies"
+                    COMMAND "${CONAN_COMMAND}" "install" "--tool-requires=exqudens-cmake/0.0.1" "--deployer" "direct_deploy" "--deployer-folder" "${CMAKE_SOURCE_DIR}/build/dependencies"
                     COMMAND_ECHO "STDERR"
                     ENCODING "UTF-8"
                     COMMAND_ERROR_IS_FATAL "ANY"
@@ -47,16 +49,15 @@ set(SKIP_TEST "0" CACHE BOOL "...")
 set(TEST_GROUP ".*UnitTests" CACHE STRING "...")
 set(TEST_CASE "all" CACHE STRING "...")
 
-string(REPLACE "." ";" PRESET_NAME_ELEMENTS "${PRESET_NAME}")
-if("msvc-16-x64-x64" IN_LIST "PRESET_NAME_ELEMENTS")
-    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/msvc-16-x64-x64-toolchain.cmake")
+if("msvc-x64-x64" IN_LIST "PRESET_NAME_ELEMENTS")
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/build/msvc-x64-x64-toolchain.cmake")
         set_msvc_toolchain(TOOLCHAIN_CONTENT
             PROCESSOR "x86_64"
             OS "${CMAKE_HOST_SYSTEM_NAME}"
-            VERSION "16"
+            VERSION "17"
             HOST "x64"
             TARGET "x64"
-            OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/msvc-16-x64-x64-toolchain.cmake"
+            OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/build/msvc-x64-x64-toolchain.cmake"
         )
     endif()
 elseif("gcc" IN_LIST PRESET_NAME_ELEMENTS)
@@ -79,7 +80,10 @@ string(STRIP "${RAW_NAME}" NAME)
 string(STRIP "${RAW_VERSION}" VERSION)
 project("${NAME}" VERSION "${VERSION}" LANGUAGES "NONE")
 
-message(STATUS "project: '${PROJECT_NAME}-${PROJECT_VERSION}'")
+# CMAKE_TOOLCHAIN_FILE
+message(STATUS "CMAKE_TOOLCHAIN_FILE: '${CMAKE_TOOLCHAIN_FILE}'")
+message(STATUS "PROJECT_NAME: '${PROJECT_NAME}'")
+message(STATUS "PROJECT_VERSION: '${PROJECT_VERSION}'")
 
 string(REPLACE "_" "-" BASE_DIR "${PROJECT_NAME}")
 string(REPLACE "-cpp-" "-" BASE_DIR "${BASE_DIR}")

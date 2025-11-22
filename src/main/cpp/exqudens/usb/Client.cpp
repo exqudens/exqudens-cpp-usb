@@ -6,7 +6,6 @@
 #include "exqudens/usb/versions.hpp"
 
 #define CALL_INFO std::string(__FUNCTION__) + "(" + std::filesystem::path(__FILE__).filename().string() + ":" + std::to_string(__LINE__) + ")"
-#define LOGGER_ID "exqudens.usb.Client"
 #define LOGGER_LEVEL_ERROR 2
 #define LOGGER_LEVEL_DEBUG 5
 
@@ -458,5 +457,4 @@ namespace exqudens::usb {
 }
 
 #undef CALL_INFO
-#undef LOGGER_ID
 #undef LOGGER_LEVEL_ERROR

@@ -13,6 +13,9 @@
 #include "TestApplication.hpp"
 #include "TestUtils.hpp"
 
+// include main files
+#include "exqudens/usb/Client.hpp"
+
 // include test files
 #include "unit/IClientUnitTests.hpp"
 #include "system/IClientSystemTests.hpp"
@@ -33,13 +36,13 @@ int TestApplication::run(int argc, char** argv) {
         std::filesystem::path executableDir(TestUtils::getExecutableDir());
         std::string loggingFile = (executableDir / "log" / "log.txt").generic_string();
         size_t loggingFileSize = 1073741824; // 1 gb
-        std::map<std::string, unsigned short> loggerIdLevelMap = {
-            {LOGGER_ID, 0},
-            {"exqudens.usb.Client", 0},
-            {"IClientUnitTests", 0},
-            {"IClientSystemTests", 0}
+        std::set<std::string> loggerIdSet = {
+            LOGGER_ID,
+            exqudens::usb::Client::LOGGER_ID,
+            exqudens::usb::IClientUnitTests::LOGGER_ID,
+            exqudens::usb::IClientSystemTests::LOGGER_ID
         };
-        std::string loggingConfigResult = exqudens::Log::configure(loggingFile, loggingFileSize, loggerIdLevelMap);
+        std::string loggingConfigResult = exqudens::Log::configure(loggingFile, loggingFileSize, loggerIdSet);
 
         EXQUDENS_LOG_INFO(LOGGER_ID) << "bgn";
         EXQUDENS_LOG_INFO(LOGGER_ID) << "loggingConfigResult: '" << loggingConfigResult << "'";

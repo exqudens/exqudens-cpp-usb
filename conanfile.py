@@ -26,7 +26,7 @@ class ConanConfiguration(ConanFile):
 
     def requirements(self):
         try:
-            self.requires("libusb/1.0.26")
+            self.requires("libusb/1.0.26", transitive_headers=True)
         except Exception as e:
             self.output.error(e)
             raise e

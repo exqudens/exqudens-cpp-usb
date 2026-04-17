@@ -91,8 +91,8 @@ namespace exqudens::usb {
             size_t bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint, uint32_t timeout) override;
             size_t bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint) override;
 
-            std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, const int& size, bool autoEndpointDirection) override;
-            std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, const int& size) override;
+            std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, int32_t size, bool autoEndpointDirection) override;
+            std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, int32_t size) override;
             std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout) override;
             std::vector<uint8_t> bulkRead(uint8_t endpoint) override;
 

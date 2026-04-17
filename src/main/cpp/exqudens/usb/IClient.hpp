@@ -71,8 +71,8 @@ namespace exqudens::usb {
             virtual size_t bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint, uint32_t timeout) = 0;
             virtual size_t bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint) = 0;
 
-            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, const int& size, bool autoEndpointDirection) = 0;
-            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, const int& size) = 0;
+            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, int32_t size, bool autoEndpointDirection) = 0;
+            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, int32_t size) = 0;
             virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout) = 0;
             virtual std::vector<uint8_t> bulkRead(uint8_t endpoint) = 0;
 

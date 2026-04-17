@@ -1,6 +1,6 @@
+#include <climits>
 #include <filesystem>
 #include <stdexcept>
-#include <limits>
 
 #include "exqudens/usb/Client.hpp"
 #include "exqudens/usb/versions.hpp"
@@ -324,7 +324,7 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint, uint32_t timeout, const int& size, bool autoEndpointDirection) {
+    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint, uint32_t timeout, int32_t size, bool autoEndpointDirection) {
         try {
             if (size < 0) {
                 throw std::runtime_error(CALL_INFO + ": size: " + std::to_string(size) + " less zero");
@@ -354,7 +354,7 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint, uint32_t timeout, const int& size) {
+    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint, uint32_t timeout, int32_t size) {
         try {
             return bulkRead(endpoint, timeout, size, true);
         } catch (...) {

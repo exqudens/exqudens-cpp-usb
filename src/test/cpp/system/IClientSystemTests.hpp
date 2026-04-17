@@ -39,6 +39,84 @@ namespace exqudens::usb {
             std::shared_ptr<IClient> client = nullptr;
             std::vector<std::map<std::string, unsigned short>> devices = {};
             std::map<std::string, unsigned short> device = {};
+            std::string data = "";
+            std::vector<unsigned char> bytes = {};
+            size_t size = 0;
+
+            client = ClientFactory::createShared(true, true, &IClientSystemTests::log);
+            devices = client->listDevices();
+            for (size_t i = 0; i < devices.size(); i++) {
+                EXQUDENS_LOG_INFO(LOGGER_ID) << client->toString(devices.at(i));
+                if (devices.at(i).at("vendor") == 0x0484 && devices.at(i).at("product") == 0x5741) {
+                    device = devices.at(i);
+                    break;
+                }
+            }
+            ASSERT_FALSE(device.empty());
+
+            try {
+                client->open(device);
+            } catch (const std::exception& openException) {
+                std::string errorMessage = TestUtils::toString(openException);
+                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+                FAIL() << errorMessage;
+            } catch (...) {
+                std::string errorMessage = "'open' uknown error";
+                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+                FAIL() << errorMessage;
+            }
+            ASSERT_TRUE(client->isOpen());
+            ASSERT_TRUE(device == client->getDevice());
+
+            // sent/receive - 1
+            data = "abc";
+            bytes = std::vector<unsigned char>(data.begin(), data.end());
+            size = client->bulkWrite(bytes, 1);
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "sent data: '" << data << "'";
+
+            ASSERT_EQ(3, size);
+
+            bytes = client->bulkRead(1);
+            data = std::string(bytes.begin(), bytes.end());
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "received data: '" << data << "'";
+
+            ASSERT_EQ(std::string("ABC"), data);
+
+            // sent/receive - 2
+            data = "sd";
+            bytes = std::vector<unsigned char>(data.begin(), data.end());
+            size = client->bulkWrite(bytes, 1);
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "sent data: '" << data << "'";
+
+            ASSERT_EQ(3, size);
+
+            bytes = client->bulkRead(1);
+            data = std::string(bytes.begin(), bytes.end());
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "received data: '" << data << "'";
+
+            ASSERT_EQ(std::string("SD"), data);
+
+            client->close();
+            ASSERT_FALSE(client->isOpen());
+            ASSERT_TRUE(client->getDevice().empty());
+
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
+        } catch (const std::exception& e) {
+            std::string errorMessage = TestUtils::toString(e);
+            EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+            FAIL() << errorMessage;
+        }
+    }
+
+    TEST_F(IClientSystemTests, test2) {
+        try {
+            std::string testGroup = testing::UnitTest::GetInstance()->current_test_info()->test_suite_name();
+            std::string testCase = testing::UnitTest::GetInstance()->current_test_info()->name();
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' bgn";
+
+            std::shared_ptr<IClient> client = nullptr;
+            std::vector<std::map<std::string, unsigned short>> devices = {};
+            std::map<std::string, unsigned short> device = {};
             std::vector<std::string> stackTrace = {};
             std::string data = "";
             std::vector<unsigned char> bytes = {};

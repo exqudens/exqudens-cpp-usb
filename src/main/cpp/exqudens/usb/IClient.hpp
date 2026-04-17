@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
+#include <optional>
 #include <vector>
 #include <map>
 #include <functional>
@@ -19,10 +21,10 @@ namespace exqudens::usb {
             virtual void setLogFunction(
                     const std::function<void(
                         const std::string& file,
-                        const size_t& line,
+                        size_t line,
                         const std::string& function,
                         const std::string& id,
-                        const unsigned short& level,
+                        uint16_t level,
                         const std::string& message
                     )>& value //!< A log function.
             ) = 0;
@@ -42,37 +44,37 @@ namespace exqudens::usb {
             *
             * @throws std::runtime_error
             */
-            virtual std::vector<std::map<std::string, unsigned short>> listDevices() = 0;
+            virtual std::vector<std::map<std::string, uint16_t>> listDevices() = 0;
 
             virtual std::string toString(
-                const std::map<std::string, unsigned short>& value
+                const std::map<std::string, uint16_t>& value
             ) = 0;
 
             virtual void open(
-                const std::map<std::string, unsigned short>& value,
-                const bool& detachKernelDriverIfActive,
-                const bool& claimInterface
+                const std::map<std::string, uint16_t>& value,
+                const std::optional<int32_t>& interfaceNumber,
+                const std::optional<bool>& detachKernelDriver
             ) = 0;
 
             virtual void open(
-                const std::map<std::string, unsigned short>& value
+                const std::map<std::string, uint16_t>& value
             ) = 0;
 
             virtual bool isOpen() = 0;
 
-            virtual std::map<std::string, unsigned short> getDevice() = 0;
+            virtual std::map<std::string, uint16_t> getDevice() = 0;
 
-            virtual unsigned char toWriteEndpoint(const unsigned char& endpoint) = 0;
-            virtual unsigned char toReadEndpoint(const unsigned char& endpoint) = 0;
+            virtual uint8_t toWriteEndpoint(uint8_t endpoint) = 0;
+            virtual uint8_t toReadEndpoint(uint8_t endpoint) = 0;
 
-            virtual size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout, const bool& autoEndpointDirection) = 0;
-            virtual size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) = 0;
-            virtual size_t bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint) = 0;
+            virtual size_t bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint, uint32_t timeout, bool autoEndpointDirection) = 0;
+            virtual size_t bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint, uint32_t timeout) = 0;
+            virtual size_t bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint) = 0;
 
-            virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size, const bool& autoEndpointDirection) = 0;
-            virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size) = 0;
-            virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint, const unsigned int& timeout) = 0;
-            virtual std::vector<unsigned char> bulkRead(const unsigned char& endpoint) = 0;
+            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, const int& size, bool autoEndpointDirection) = 0;
+            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout, const int& size) = 0;
+            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint, uint32_t timeout) = 0;
+            virtual std::vector<uint8_t> bulkRead(uint8_t endpoint) = 0;
 
             virtual void close() = 0;
 

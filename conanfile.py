@@ -26,7 +26,7 @@ class ConanConfiguration(ConanFile):
 
     def requirements(self):
         try:
-            self.requires("libusb/1.0.26", transitive_headers=True)
+            self.requires("libusb/1.0.26.0", transitive_headers=True)
         except Exception as e:
             self.output.error(e)
             raise e
@@ -62,6 +62,9 @@ class ConanConfiguration(ConanFile):
             for dep in self.dependencies.values():
                 for dir in dep.cpp_info.bindirs:
                     copy(self, pattern="*.dll", src=dir, dst=Path(self.build_folder).joinpath("bin").as_posix())
+                for dir in dep.cpp_info.libdirs:
+                    copy(self, pattern="*.so", src=Path(dir).as_posix(), dst=Path(self.build_folder).joinpath("lib").as_posix())
+                    copy(self, pattern="*.so.*", src=Path(dir).as_posix(), dst=Path(self.build_folder).joinpath("lib").as_posix())
         except Exception as e:
             self.output.error(e)
             raise e

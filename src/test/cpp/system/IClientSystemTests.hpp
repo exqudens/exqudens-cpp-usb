@@ -55,7 +55,17 @@ namespace exqudens::usb {
             }
             ASSERT_FALSE(device.empty());
 
-            client->open(device, true, true);
+            try {
+                client->open(device);
+            } catch (const std::exception& openException) {
+                std::string errorMessage = TestUtils::toString(openException);
+                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+                FAIL() << errorMessage;
+            } catch (...) {
+                std::string errorMessage = "'open' uknown error";
+                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+                FAIL() << errorMessage;
+            }
             ASSERT_TRUE(client->isOpen());
             ASSERT_TRUE(device == client->getDevice());
 

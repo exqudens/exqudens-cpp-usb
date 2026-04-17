@@ -12,14 +12,14 @@
 namespace exqudens::usb {
 
     Client::Client(
-        const bool& autoInit,
-        const bool& autoClose,
+        bool autoInit,
+        bool autoClose,
         const std::function<void(
             const std::string& file,
-            const size_t& line,
+            size_t line,
             const std::string& function,
             const std::string& id,
-            const unsigned short& level,
+            uint16_t level,
             const std::string& message
         )>& logFunction
     ):
@@ -32,7 +32,7 @@ namespace exqudens::usb {
         }
     }
 
-    Client::Client(const bool& autoInit, const bool& autoClose): Client(autoInit, autoClose, {}) {}
+    Client::Client(bool autoInit, bool autoClose): Client(autoInit, autoClose, {}) {}
 
     Client::Client(): Client(true, true, {}) {}
 
@@ -47,10 +47,10 @@ namespace exqudens::usb {
     void Client::setLogFunction(
             const std::function<void(
                 const std::string& file,
-                const size_t& line,
+                size_t line,
                 const std::string& function,
                 const std::string& id,
-                const unsigned short& level,
+                uint16_t level,
                 const std::string& message
             )>& value //!< A log function.
     ) {
@@ -109,14 +109,14 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<std::map<std::string, unsigned short>> Client::listDevices() {
+    std::vector<std::map<std::string, uint16_t>> Client::listDevices() {
         try {
-            std::vector<std::map<std::string, unsigned short>> result = {};
+            std::vector<std::map<std::string, uint16_t>> result = {};
             libusb_device** libusbDevices;
             ssize_t libusbDevicesSize = libusb_get_device_list(context, &libusbDevices);
             for (ssize_t i = 0; i < libusbDevicesSize; i++) {
                 libusb_device* libusbDevice = libusbDevices[i];
-                std::map<std::string, unsigned short> entry = toMap(libusbDevice);
+                std::map<std::string, uint16_t> entry = toMap(libusbDevice);
                 result.emplace_back(entry);
             }
             libusb_free_device_list(libusbDevices, 1);
@@ -126,13 +126,13 @@ namespace exqudens::usb {
         }
     }
 
-    std::string Client::toString(const std::map<std::string, unsigned short>& value) {
+    std::string Client::toString(const std::map<std::string, uint16_t>& value) {
         try {
             std::string result = "";
             std::vector<std::string> parts = {};
             for (const auto& entry : value) {
                 std::string k = entry.first;
-                unsigned short v = entry.second;
+                uint16_t v = entry.second;
                 std::string s = k + ": " + std::to_string(v);
                 parts.emplace_back(s);
             }
@@ -150,16 +150,16 @@ namespace exqudens::usb {
         }
     }
 
-    void Client::open(const std::map<std::string, unsigned short>& value, const bool& detachKernelDriverIfActive, const bool& claimInterface) {
+    void Client::open(const std::map<std::string, uint16_t>& value, const std::optional<int32_t>& interfaceNumber, const std::optional<bool>& detachKernelDriver) {
         try {
             if (isOpen()) {
                 throw std::runtime_error(CALL_INFO + ": the device is already open! call 'close' before...");
             }
 
-            std::map<std::string, unsigned short> deviceForOpen = value;
+            std::map<std::string, uint16_t> deviceForOpen = value;
 
             if (deviceForOpen.empty()) {
-                std::vector<std::map<std::string, unsigned short>> devices = listDevices();
+                std::vector<std::map<std::string, uint16_t>> devices = listDevices();
                 if (devices.empty()) {
                     throw std::runtime_error(CALL_INFO + ": unable to find compatibale devices!");
                 }
@@ -180,7 +180,7 @@ namespace exqudens::usb {
             ssize_t libusbDevicesSize = libusb_get_device_list(context, &libusbDevices);
             for (ssize_t i = 0; i < libusbDevicesSize; i++) {
                 libusb_device* libusbDevice = libusbDevices[i];
-                std::map<std::string, unsigned short> entry = toMap(libusbDevice);
+                std::map<std::string, uint16_t> entry = toMap(libusbDevice);
                 if (entry == deviceForOpen) {
                     int libusbError = libusb_open(libusbDevice, &handle);
                     if (libusbError != 0) {
@@ -197,21 +197,36 @@ namespace exqudens::usb {
                 throw std::runtime_error(CALL_INFO + ": device handle is null!");
             }
 
-            if (detachKernelDriverIfActive) {
-                if (libusb_kernel_driver_active(handle, 0) == 1) {
-                    if (libusb_detach_kernel_driver(handle, 0) != 0) {
-                        close();
-                        throw std::runtime_error(CALL_INFO + ": unable to detach kernel driver!");
+            this->interfaceNumber = interfaceNumber.value_or(0);
+            int libusbError = 0;
+
+            if (detachKernelDriver) {
+                if (detachKernelDriver.value()) {
+                    attachKernelDriver = true;
+                    libusbError = libusb_detach_kernel_driver(handle, this->interfaceNumber.value());
+                    if (libusbError != 0) {
+                        libusb_close(handle);
+                        const char* libusbErrorName = libusb_error_name(libusbError);
+                        throw std::runtime_error(CALL_INFO + ": unable to detach kernel driver interface: " + std::to_string(this->interfaceNumber.value()) + " libusbErrorName: '" + std::string(libusbErrorName) + "'");
+                    }
+                }
+            } else {
+                if (libusb_kernel_driver_active(handle, this->interfaceNumber.value()) == 1) {
+                    attachKernelDriver = true;
+                    libusbError = libusb_detach_kernel_driver(handle, this->interfaceNumber.value());
+                    if (libusbError != 0) {
+                        libusb_close(handle);
+                        const char* libusbErrorName = libusb_error_name(libusbError);
+                        throw std::runtime_error(CALL_INFO + ": unable to detach kernel driver interface: " + std::to_string(this->interfaceNumber.value()) + " libusbErrorName: '" + std::string(libusbErrorName) + "'");
                     }
                 }
             }
 
-            if (claimInterface) {
-                int libusbError = libusb_claim_interface(handle, 0);
-                if (libusbError) {
-                    const char* libusbErrorName = libusb_error_name(libusbError);
-                    throw std::runtime_error(CALL_INFO + ": libusbErrorName: '" + std::string(libusbErrorName) + "'");
-                }
+            libusbError = libusb_claim_interface(handle, this->interfaceNumber.value());
+            if (libusbError != 0) {
+                libusb_close(handle);
+                const char* libusbErrorName = libusb_error_name(libusbError);
+                throw std::runtime_error(CALL_INFO + ": unable to claim interface: " + std::to_string(this->interfaceNumber.value()) + " libusbErrorName: '" + std::string(libusbErrorName) + "'");
             }
 
             device = deviceForOpen;
@@ -220,9 +235,9 @@ namespace exqudens::usb {
         }
     }
 
-    void Client::open(const std::map<std::string, unsigned short>& value) {
+    void Client::open(const std::map<std::string, uint16_t>& value) {
         try {
-            open(value, false, false);
+            open(value, {}, {});
         } catch (...) {
             std::throw_with_nested(std::runtime_error(CALL_INFO));
         }
@@ -240,7 +255,7 @@ namespace exqudens::usb {
         }
     }
 
-    std::map<std::string, unsigned short> Client::getDevice() {
+    std::map<std::string, uint16_t> Client::getDevice() {
         try {
             return device;
         } catch (...) {
@@ -248,7 +263,7 @@ namespace exqudens::usb {
         }
     }
 
-    unsigned char Client::toWriteEndpoint(const unsigned char& endpoint) {
+    uint8_t Client::toWriteEndpoint(uint8_t endpoint) {
         try {
             return endpoint | LIBUSB_ENDPOINT_OUT;
         } catch (...) {
@@ -256,7 +271,7 @@ namespace exqudens::usb {
         }
     }
 
-    unsigned char Client::toReadEndpoint(const unsigned char& endpoint) {
+    uint8_t Client::toReadEndpoint(uint8_t endpoint) {
         try {
             return endpoint | LIBUSB_ENDPOINT_IN;
         } catch (...) {
@@ -264,13 +279,13 @@ namespace exqudens::usb {
         }
     }
 
-    size_t Client::bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout, const bool& autoEndpointDirection) {
+    size_t Client::bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint, uint32_t timeout, bool autoEndpointDirection) {
         try {
             if (value.size() > INT_MAX) {
                 throw std::runtime_error(CALL_INFO + ": value.size: " + std::to_string(value.size()) + " greater than INT_MAX: " + std::to_string(INT_MAX));
             }
             int libusbBulkTransfered = 0;
-            std::vector<unsigned char>& data = const_cast<std::vector<unsigned char>&>(value);
+            std::vector<uint8_t>& data = const_cast<std::vector<uint8_t>&>(value);
             int libusbError = libusb_bulk_transfer(
                 handle,
                 (autoEndpointDirection ? toWriteEndpoint(endpoint) : endpoint),
@@ -293,7 +308,7 @@ namespace exqudens::usb {
         }
     }
 
-    size_t Client::bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint, const unsigned int& timeout) {
+    size_t Client::bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint, uint32_t timeout) {
         try {
             return bulkWrite(value, endpoint, timeout, true);
         } catch (...) {
@@ -301,7 +316,7 @@ namespace exqudens::usb {
         }
     }
 
-    size_t Client::bulkWrite(const std::vector<unsigned char>& value, const unsigned char& endpoint) {
+    size_t Client::bulkWrite(const std::vector<uint8_t>& value, uint8_t endpoint) {
         try {
             return bulkWrite(value, endpoint, 1000, true);
         } catch (...) {
@@ -309,12 +324,12 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size, const bool& autoEndpointDirection) {
+    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint, uint32_t timeout, const int& size, bool autoEndpointDirection) {
         try {
             if (size < 0) {
                 throw std::runtime_error(CALL_INFO + ": size: " + std::to_string(size) + " less zero");
             }
-            std::vector<unsigned char> result = {};
+            std::vector<uint8_t> result = {};
             result.resize(size);
             int libusbBulkTransfered = 0;
             int libusbError = libusb_bulk_transfer(
@@ -339,7 +354,7 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint, const unsigned int& timeout, const int& size) {
+    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint, uint32_t timeout, const int& size) {
         try {
             return bulkRead(endpoint, timeout, size, true);
         } catch (...) {
@@ -347,7 +362,7 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint, const unsigned int& timeout) {
+    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint, uint32_t timeout) {
         try {
             return bulkRead(endpoint, timeout, INT_MAX, true);
         } catch (...) {
@@ -355,7 +370,7 @@ namespace exqudens::usb {
         }
     }
 
-    std::vector<unsigned char> Client::bulkRead(const unsigned char& endpoint) {
+    std::vector<uint8_t> Client::bulkRead(uint8_t endpoint) {
         try {
             return bulkRead(endpoint, 1000, INT_MAX, true);
         } catch (...) {
@@ -366,10 +381,26 @@ namespace exqudens::usb {
     void Client::close() {
         try {
             if (handle != nullptr) {
+                int libusbError = libusb_release_interface(handle, interfaceNumber.value());
+                if (libusbError != 0) {
+                    libusb_close(handle);
+                    const char* libusbErrorName = libusb_error_name(libusbError);
+                    throw std::runtime_error(CALL_INFO + ": unable to release interface: " + std::to_string(this->interfaceNumber.value()) + " libusbErrorName: '" + std::string(libusbErrorName) + "'");
+                }
+                if (attachKernelDriver) {
+                    libusbError = libusb_attach_kernel_driver(handle, interfaceNumber.value());
+                    if (libusbError != 0) {
+                        libusb_close(handle);
+                        const char* libusbErrorName = libusb_error_name(libusbError);
+                        throw std::runtime_error(CALL_INFO + ": unable to attach kernel driver: " + std::to_string(this->interfaceNumber.value()) + " libusbErrorName: '" + std::string(libusbErrorName) + "'");
+                    }
+                }
                 libusb_close(handle);
                 handle = nullptr;
             }
             device = {};
+            attachKernelDriver = false;
+            interfaceNumber = {};
         } catch (...) {
             std::throw_with_nested(std::runtime_error(CALL_INFO));
         }
@@ -407,9 +438,9 @@ namespace exqudens::usb {
         }
     }
 
-    std::map<std::string, unsigned short> Client::toMap(libusb_device* libusbDevice) {
+    std::map<std::string, uint16_t> Client::toMap(libusb_device* libusbDevice) {
         try {
-            std::map<std::string, unsigned short> result = {};
+            std::map<std::string, uint16_t> result = {};
 
             libusb_device_descriptor libusbDeviceDescriptor = {0};
             int libusbError = libusb_get_device_descriptor(libusbDevice, &libusbDeviceDescriptor);
@@ -418,11 +449,11 @@ namespace exqudens::usb {
                 throw std::runtime_error(CALL_INFO + ": libusbErrorName: '" + std::string(libusbErrorName) + "'");
             }
 
-            unsigned short vendor = libusbDeviceDescriptor.idVendor;
-            unsigned short product = libusbDeviceDescriptor.idProduct;
-            unsigned short port = libusb_get_port_number(libusbDevice);
-            unsigned short bus = libusb_get_bus_number(libusbDevice);
-            unsigned short address = libusb_get_device_address(libusbDevice);
+            uint16_t vendor = libusbDeviceDescriptor.idVendor;
+            uint16_t product = libusbDeviceDescriptor.idProduct;
+            uint16_t port = libusb_get_port_number(libusbDevice);
+            uint16_t bus = libusb_get_bus_number(libusbDevice);
+            uint16_t address = libusb_get_device_address(libusbDevice);
 
             result.insert({"vendor", vendor});
             result.insert({"product", product});
@@ -438,10 +469,10 @@ namespace exqudens::usb {
 
     void Client::log(
         const std::string& file,
-        const size_t& line,
+        size_t line,
         const std::string& function,
         const std::string& id,
-        const unsigned short& level,
+        uint16_t level,
         const std::string& message
     ) {
         try {

@@ -3,12 +3,16 @@
     "inputs": [
         {
             "id": "test-app-selector",
-            "type": "pickString",
-            "description": "Select Test Entry",
-            "default": "@_LAUNCH_DEFAULT_TEST@",
-            "options": [
-                "@_LAUNCH_TESTS@"
-            ]
+            "type": "command",
+            "command": "extension.commandvariable.pickStringRemember",
+            "args": {
+                "key": "test-app-selector",
+                "addLabelToTop": "${remember:test-app-selector}",
+                "description": "Select Test Entry",
+                "options": [
+                    "@_LAUNCH_TESTS@"
+                ]
+            }
         }
     ],
     "configurations": [
@@ -18,6 +22,7 @@
             "request": "launch",
             "console": "internalConsole",
             "cwd": "${workspaceRoot}",
+            "preLaunchTask": "test-app",
             "program": "@_BINARY_DIR@/test/bin/test-app",
             "args": [
                 "--project-binary-dir=@_BINARY_DIR@",

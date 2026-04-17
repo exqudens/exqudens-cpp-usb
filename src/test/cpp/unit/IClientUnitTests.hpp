@@ -63,7 +63,7 @@ namespace exqudens::usb {
 
             ASSERT_TRUE(client->isSetLogFunction());
 
-            expected = TestUtils::readFileString((std::filesystem::path(TestUtils::getProjectSourceDir()) / "name-version.txt").generic_string());
+            expected = TestUtils::readFileString((std::filesystem::path(TestUtils::getProjectSourceDir().value()) / "name-version.txt").generic_string());
             expected = TestUtils::split(expected, ":").at(1);
             expected = TestUtils::trim(expected);
             EXQUDENS_LOG_INFO(LOGGER_ID) << "expected: '" << expected << "'";

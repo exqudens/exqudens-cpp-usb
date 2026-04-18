@@ -39,6 +39,109 @@ namespace exqudens::usb {
             std::shared_ptr<IClient> client = nullptr;
             std::vector<std::map<std::string, unsigned short>> devices = {};
             std::map<std::string, unsigned short> device = {};
+            std::vector<std::string> stackTrace = {};
+            std::string data = "";
+            std::vector<unsigned char> bytes = {};
+            size_t size = 0;
+
+            client = ClientFactory::createShared(true, true, &IClientSystemTests::log);
+            devices = client->listDevices();
+            for (size_t i = 0; i < devices.size(); i++) {
+                EXQUDENS_LOG_INFO(LOGGER_ID) << client->toString(devices.at(i));
+                if (devices.at(i).at("vendor") == 0x0484 && devices.at(i).at("product") == 0x5741) {
+                    device = devices.at(i);
+                    break;
+                }
+            }
+            ASSERT_FALSE(device.empty());
+
+            try {
+                client->open(device);
+            } catch (const std::exception& openException) {
+                std::string errorMessage = TestUtils::toString(openException);
+                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+                FAIL() << errorMessage;
+            } catch (...) {
+                std::string errorMessage = "'open' uknown error";
+                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+                FAIL() << errorMessage;
+            }
+            ASSERT_TRUE(client->isOpen());
+            ASSERT_TRUE(device == client->getDevice());
+
+            try {
+                bytes = client->bulkRead(1, 100, 1024);
+            } catch (const std::exception& e) {
+                stackTrace = TestUtils::toStackTrace(e);
+            }
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
+
+            ASSERT_TRUE(bytes.empty());
+            ASSERT_FALSE(stackTrace.empty());
+            ASSERT_TRUE(stackTrace.at(0).ends_with("libusbErrorName: 'LIBUSB_ERROR_TIMEOUT'"));
+
+            stackTrace = {};
+            data = "";
+            bytes = {};
+            size = 0;
+
+            data = "abc";
+            bytes = std::vector<unsigned char>(data.begin(), data.end());
+            size = client->bulkWrite(bytes, 1);
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "size: " << size;
+
+            ASSERT_EQ(3, size);
+
+            stackTrace = {};
+            data = "";
+            bytes = {};
+            size = 0;
+
+            bytes = client->bulkRead(1, 100, 1024);
+            data = std::string(bytes.begin(), bytes.end());
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "data: '" << data << "'";
+
+            ASSERT_EQ(std::string("ABC"), data);
+
+            stackTrace = {};
+            data = "";
+            bytes = {};
+            size = 0;
+
+            try {
+                bytes = client->bulkRead(1, 100, 1024);
+            } catch (const std::exception& e) {
+                stackTrace = TestUtils::toStackTrace(e);
+            }
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
+
+            ASSERT_TRUE(bytes.empty());
+            ASSERT_FALSE(stackTrace.empty());
+            ASSERT_TRUE(stackTrace.at(0).ends_with("libusbErrorName: 'LIBUSB_ERROR_TIMEOUT'"));
+
+            client->close();
+            ASSERT_FALSE(client->isOpen());
+            ASSERT_TRUE(client->getDevice().empty());
+
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
+        } catch (const std::exception& e) {
+            std::string errorMessage = TestUtils::toString(e);
+            EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
+            FAIL() << errorMessage;
+        }
+    }
+
+    TEST_F(IClientSystemTests, test2) {
+        try {
+            std::string testGroup = testing::UnitTest::GetInstance()->current_test_info()->test_suite_name();
+            std::string testCase = testing::UnitTest::GetInstance()->current_test_info()->name();
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' bgn";
+
+            std::shared_ptr<IClient> client = nullptr;
+            std::vector<std::map<std::string, unsigned short>> devices = {};
+            std::map<std::string, unsigned short> device = {};
             std::string data = "";
             std::vector<unsigned char> bytes = {};
             size_t size = 0;
@@ -74,7 +177,7 @@ namespace exqudens::usb {
             size = client->bulkWrite(bytes, 1);
             EXQUDENS_LOG_INFO(LOGGER_ID) << "sent data: '" << data << "'";
 
-            bytes = client->bulkRead(1);
+            bytes = client->bulkRead(1, 100, 1024);
             data = std::string(bytes.begin(), bytes.end());
             EXQUDENS_LOG_INFO(LOGGER_ID) << "received data: '" << data << "'";
 
@@ -86,114 +189,23 @@ namespace exqudens::usb {
             size = client->bulkWrite(bytes, 1);
             EXQUDENS_LOG_INFO(LOGGER_ID) << "sent data: '" << data << "'";
 
-            bytes = client->bulkRead(1);
+            bytes = client->bulkRead(1, 100, 1024);
             data = std::string(bytes.begin(), bytes.end());
             EXQUDENS_LOG_INFO(LOGGER_ID) << "received data: '" << data << "'";
 
             ASSERT_EQ(std::string("SD"), data);
 
-            client->close();
-            ASSERT_FALSE(client->isOpen());
-            ASSERT_TRUE(client->getDevice().empty());
-
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' end";
-        } catch (const std::exception& e) {
-            std::string errorMessage = TestUtils::toString(e);
-            EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
-            FAIL() << errorMessage;
-        }
-    }
-
-    TEST_F(IClientSystemTests, test2) {
-        try {
-            std::string testGroup = testing::UnitTest::GetInstance()->current_test_info()->test_suite_name();
-            std::string testCase = testing::UnitTest::GetInstance()->current_test_info()->name();
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "'" << testGroup << "." << testCase << "' bgn";
-
-            std::shared_ptr<IClient> client = nullptr;
-            std::vector<std::map<std::string, unsigned short>> devices = {};
-            std::map<std::string, unsigned short> device = {};
-            std::vector<std::string> stackTrace = {};
-            std::string data = "";
-            std::vector<unsigned char> bytes = {};
-            size_t size = 0;
-
-            client = ClientFactory::createShared(true, true, &IClientSystemTests::log);
-            devices = client->listDevices();
-            for (size_t i = 0; i < devices.size(); i++) {
-                EXQUDENS_LOG_INFO(LOGGER_ID) << client->toString(devices.at(i));
-                if (devices.at(i).at("vendor") == 0x0484 && devices.at(i).at("product") == 0x5741) {
-                    device = devices.at(i);
-                    break;
-                }
-            }
-            ASSERT_FALSE(device.empty());
-
-            try {
-                client->open(device);
-            } catch (const std::exception& openException) {
-                std::string errorMessage = TestUtils::toString(openException);
-                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
-                FAIL() << errorMessage;
-            } catch (...) {
-                std::string errorMessage = "'open' uknown error";
-                EXQUDENS_LOG_ERROR(LOGGER_ID) << errorMessage;
-                FAIL() << errorMessage;
-            }
-            ASSERT_TRUE(client->isOpen());
-            ASSERT_TRUE(device == client->getDevice());
-
-            try {
-                bytes = client->bulkRead(1);
-            } catch (const std::exception& e) {
-                stackTrace = TestUtils::toStackTrace(e);
-            }
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
-
-            ASSERT_TRUE(bytes.empty());
-            ASSERT_FALSE(stackTrace.empty());
-            ASSERT_TRUE(stackTrace.at(0).ends_with("libusbErrorName: 'LIBUSB_ERROR_TIMEOUT'"));
-
-            stackTrace = {};
-            data = "";
-            bytes = {};
-            size = 0;
-
-            data = "abc";
+            // sent/receive - 3
+            data = "Hello";
             bytes = std::vector<unsigned char>(data.begin(), data.end());
             size = client->bulkWrite(bytes, 1);
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "size: " << size;
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "sent data: '" << data << "'";
 
-            ASSERT_EQ(3, size);
-
-            stackTrace = {};
-            data = "";
-            bytes = {};
-            size = 0;
-
-            bytes = client->bulkRead(1);
+            bytes = client->bulkRead(1, 100, 1024);
             data = std::string(bytes.begin(), bytes.end());
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "data: '" << data << "'";
+            EXQUDENS_LOG_INFO(LOGGER_ID) << "received data: '" << data << "'";
 
-            ASSERT_EQ(std::string("ABC"), data);
-
-            stackTrace = {};
-            data = "";
-            bytes = {};
-            size = 0;
-
-            try {
-                bytes = client->bulkRead(1);
-            } catch (const std::exception& e) {
-                stackTrace = TestUtils::toStackTrace(e);
-            }
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace.size: " << stackTrace.size();
-            EXQUDENS_LOG_INFO(LOGGER_ID) << "stackTrace[0]: '" << stackTrace.at(0) << "'";
-
-            ASSERT_TRUE(bytes.empty());
-            ASSERT_FALSE(stackTrace.empty());
-            ASSERT_TRUE(stackTrace.at(0).ends_with("libusbErrorName: 'LIBUSB_ERROR_TIMEOUT'"));
+            ASSERT_EQ(std::string("Hi"), data);
 
             client->close();
             ASSERT_FALSE(client->isOpen());

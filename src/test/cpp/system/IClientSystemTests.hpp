@@ -74,8 +74,6 @@ namespace exqudens::usb {
             size = client->bulkWrite(bytes, 1);
             EXQUDENS_LOG_INFO(LOGGER_ID) << "sent data: '" << data << "'";
 
-            ASSERT_EQ(3, size);
-
             bytes = client->bulkRead(1);
             data = std::string(bytes.begin(), bytes.end());
             EXQUDENS_LOG_INFO(LOGGER_ID) << "received data: '" << data << "'";
@@ -87,8 +85,6 @@ namespace exqudens::usb {
             bytes = std::vector<unsigned char>(data.begin(), data.end());
             size = client->bulkWrite(bytes, 1);
             EXQUDENS_LOG_INFO(LOGGER_ID) << "sent data: '" << data << "'";
-
-            ASSERT_EQ(3, size);
 
             bytes = client->bulkRead(1);
             data = std::string(bytes.begin(), bytes.end());

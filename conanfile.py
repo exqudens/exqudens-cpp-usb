@@ -26,7 +26,10 @@ class ConanConfiguration(ConanFile):
 
     def requirements(self):
         try:
-            self.requires("libusb/1.0.26.0", transitive_headers=True)
+            if self.user and self.channel:
+                self.requires(f"libusb/1.0.26.0@{self.user}/{self.channel}", transitive_headers=True)
+            else:
+                self.requires("libusb/1.0.26.0", transitive_headers=True)
         except Exception as e:
             self.output.error(e)
             raise e

@@ -7,13 +7,16 @@ message(STATUS "USE_CONAN: '${USE_CONAN}'")
 
 string(REPLACE "." ";" PRESET_NAME_ELEMENTS "${PRESET_NAME}")
 if("${USE_CONAN}")
-    message(STATUS "USE_CONAN: '${USE_CONAN}'")
     if("windows" IN_LIST "PRESET_NAME_ELEMENTS")
         find_program(CONAN_COMMAND NAMES "conan.exe" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
     else()
         find_program(CONAN_COMMAND NAMES "conan" PATHS ENV CONAN_PATH ENV PATH REQUIRED NO_CACHE NO_DEFAULT_PATH)
     endif()
     message(STATUS "CONAN_COMMAND: '${CONAN_COMMAND}'")
+    set(CONAN_USER "exqudens" CACHE STRING "...")
+    set(CONAN_CHANNEL "development" CACHE STRING "...")
+    message(STATUS "CONAN_USER: '${CONAN_USER}'")
+    message(STATUS "CONAN_CHANNEL: '${CONAN_CHANNEL}'")
 endif()
 
 if("${CMAKE_UTIL_FILE}" STREQUAL "")
@@ -28,7 +31,7 @@ if("${CMAKE_UTIL_FILE}" STREQUAL "")
                     COMMAND_ERROR_IS_FATAL "ANY"
                 )]]
                 execute_process(
-                    COMMAND "${CONAN_COMMAND}" "install" "--tool-requires=exqudens-cmake/0.0.1" "--deployer" "direct_deploy" "--deployer-folder" "${CMAKE_SOURCE_DIR}/build/dependencies"
+                    COMMAND "${CONAN_COMMAND}" "install" "--tool-requires=exqudens-cmake/0.0.1@${CONAN_USER}/${CONAN_CHANNEL}" "--deployer" "direct_deploy" "--deployer-folder" "${CMAKE_SOURCE_DIR}/build/dependencies"
                     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
                     COMMAND_ECHO "STDOUT"
                     ENCODING "UTF-8"
@@ -222,6 +225,8 @@ if("${USE_CONAN}")
         execute_process(
             COMMAND "${CONAN_COMMAND}" "install"
                     "--output-folder" "${CONAN_INSTALL_PREFIX}"
+                    "--user" "${CONAN_USER}"
+                    "--channel" "${CONAN_CHANNEL}"
                     ${CONAN_SETTINGS}
                     ${CONAN_OPTIONS}
                     "${PROJECT_SOURCE_DIR}/conanfile.py"
@@ -287,6 +292,8 @@ if("${USE_CONAN}")
             execute_process(
                 COMMAND "${CONAN_COMMAND}" "install"
                         "--output-folder" "${CONAN_INSTALL_PREFIX}/test"
+                        "--user" "${CONAN_USER}"
+                        "--channel" "${CONAN_CHANNEL}"
                         ${CONAN_SETTINGS}
                         ${CONAN_OPTIONS}
                         "${PROJECT_SOURCE_DIR}/test-conanfile.py"
@@ -579,7 +586,7 @@ if(NOT "${SKIP_TEST}")
         PROPERTIES ENVIRONMENT "PATH=$<TARGET_FILE_DIR:test-app>;${ENV_PATH}"
     )
 
-    set(TEST_GROUP "all" CACHE STRING "...")
+    set(TEST_GROUP ".*UnitTests" CACHE STRING "...")
     message(STATUS "TEST_GROUP: '${TEST_GROUP}'")
     set(TEST_CASE "all" CACHE STRING "...")
     message(STATUS "TEST_CASE: '${TEST_CASE}'")
@@ -633,10 +640,10 @@ if("${USE_CONAN}")
     add_custom_target("conan-export"
         COMMAND "${CONAN_COMMAND}" "export-pkg"
                 "--output-folder" "${CMAKE_INSTALL_PREFIX}"
+                "--user" "${CONAN_USER}"
+                "--channel" "${CONAN_CHANNEL}"
                 ${CONAN_SETTINGS}
                 ${CONAN_OPTIONS}
-                #"--user" "gitlab-group+gitlab-sub-group+${PROJECT_NAME}"
-                #"--channel" "stable"
                 "${PROJECT_SOURCE_DIR}/conanfile.py"
         DEPENDS "cmake-install"
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"

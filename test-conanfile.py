@@ -12,8 +12,12 @@ class ConanConfiguration(ConanFile):
 
     def requirements(self):
         try:
-            self.requires("gtest/1.11.0.0")
-            self.requires("exqudens-cpp-log/0.0.1")
+            if self.user and self.channel:
+                self.requires(f"gtest/1.11.0.0@{self.user}/{self.channel}")
+                self.requires(f"exqudens-cpp-log/0.0.1@{self.user}/{self.channel}")
+            else:
+                self.requires("gtest/1.11.0.0")
+                self.requires("exqudens-cpp-log/0.0.1")
         except Exception as e:
             self.output.error(e)
             raise e
